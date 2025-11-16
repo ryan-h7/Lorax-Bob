@@ -95,8 +95,9 @@ export function ChatInterface() {
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
 
-    // Check for API key
+    // Check for API key and URL
     const apiKey = typeof window !== 'undefined' ? localStorage.getItem('deepseek-api-key') : null;
+    const apiUrl = typeof window !== 'undefined' ? localStorage.getItem('deepseek-api-url') : 'https://api.deepseek.com/v1';
     const model = typeof window !== 'undefined' ? localStorage.getItem('deepseek-model') : 'deepseek-v3';
     
     if (!apiKey) {
@@ -124,12 +125,14 @@ export function ChatInterface() {
           message: userMessage.content,
           sessionId,
           apiKey,
+          apiUrl: apiUrl || 'https://api.deepseek.com/v1',
           model: model || 'deepseek-v3'
         })
       });
 
       if (!response.ok) {
-        throw new Error('Failed to get response');
+        const errorData = await response.json();
+        throw new Error(errorData.error || errorData.details || 'Failed to get response');
       }
 
       const data = await response.json();
@@ -150,11 +153,11 @@ export function ChatInterface() {
         });
       }
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error sending message:', error);
       const errorMessage: Message = {
         role: 'assistant',
-        content: "I'm sorry, I'm having trouble connecting right now. Please try again in a moment.",
+        content: `❌ Error: ${error.message || "I'm having trouble connecting. Please check your API settings and try again."}`,
         timestamp: Date.now()
       };
       setMessages(prev => [...prev, errorMessage]);

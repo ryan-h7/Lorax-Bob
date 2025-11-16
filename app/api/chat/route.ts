@@ -8,7 +8,7 @@ const sessionMemories = new Map<string, MemoryManager>();
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { message, sessionId, apiKey, model } = body;
+    const { message, sessionId, apiKey, apiUrl, model } = body;
 
     if (!message || typeof message !== 'string') {
       return NextResponse.json(
@@ -24,6 +24,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!apiUrl || typeof apiUrl !== 'string') {
+      return NextResponse.json(
+        { error: 'API URL is required' },
+        { status: 400 }
+      );
+    }
+
     // Get or create memory manager for this session
     const effectiveSessionId = sessionId || 'default';
     if (!sessionMemories.has(effectiveSessionId)) {
@@ -31,9 +38,10 @@ export async function POST(request: NextRequest) {
     }
     const memory = sessionMemories.get(effectiveSessionId)!;
 
-    // Initialize DeepSeek client with user's API key and model
+    // Initialize DeepSeek client with user's API key, URL, and model
     const deepseek = new DeepSeekClient({
       apiKey,
+      baseURL: apiUrl,
       model: model || 'deepseek-v3'
     });
 

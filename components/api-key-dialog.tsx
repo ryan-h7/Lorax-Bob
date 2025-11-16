@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Settings, Eye, EyeOff, Check, X } from 'lucide-react';
+import { Settings, Eye, EyeOff, Check, X, AlertCircle } from 'lucide-react';
 
 interface ApiKeyDialogProps {
   onClose?: () => void;
@@ -13,6 +13,7 @@ interface ApiKeyDialogProps {
 
 const STORAGE_KEY = 'deepseek-api-key';
 const MODEL_KEY = 'deepseek-model';
+const URL_KEY = 'deepseek-api-url';
 
 const AVAILABLE_MODELS = [
   { id: 'deepseek-chat', name: 'DeepSeek Chat', description: 'Standard chat model' },
@@ -21,17 +22,20 @@ const AVAILABLE_MODELS = [
 ];
 
 export function ApiKeyDialog({ onClose }: ApiKeyDialogProps) {
+  const [apiUrl, setApiUrl] = useState('https://api.deepseek.com/v1');
   const [apiKey, setApiKey] = useState('');
   const [selectedModel, setSelectedModel] = useState('deepseek-v3');
   const [showKey, setShowKey] = useState(false);
   const [saved, setSaved] = useState(false);
   const [hasExistingKey, setHasExistingKey] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    // Load existing key and model on mount
+    // Load existing key, URL, and model on mount
     if (typeof window !== 'undefined') {
       const existingKey = localStorage.getItem(STORAGE_KEY);
       const existingModel = localStorage.getItem(MODEL_KEY);
+      const existingUrl = localStorage.getItem(URL_KEY);
       
       if (existingKey) {
         setApiKey(existingKey);
@@ -41,23 +45,38 @@ export function ApiKeyDialog({ onClose }: ApiKeyDialogProps) {
       if (existingModel) {
         setSelectedModel(existingModel);
       }
+      
+      if (existingUrl) {
+        setApiUrl(existingUrl);
+      }
     }
   }, []);
 
   const handleSave = () => {
-    if (!apiKey.trim()) {
-      alert('Please enter an API key');
+    setError('');
+    
+    if (!apiUrl.trim()) {
+      setError('Please enter an API URL');
       return;
     }
 
-    if (!apiKey.startsWith('sk-')) {
-      alert('DeepSeek API keys should start with "sk-"');
+    if (!apiKey.trim()) {
+      setError('Please enter an API key');
+      return;
+    }
+
+    // Validate URL format
+    try {
+      new URL(apiUrl);
+    } catch (e) {
+      setError('Please enter a valid URL (e.g., https://api.deepseek.com/v1)');
       return;
     }
 
     // Save to localStorage
     localStorage.setItem(STORAGE_KEY, apiKey);
     localStorage.setItem(MODEL_KEY, selectedModel);
+    localStorage.setItem(URL_KEY, apiUrl);
     
     setSaved(true);
     setTimeout(() => {
@@ -67,10 +86,12 @@ export function ApiKeyDialog({ onClose }: ApiKeyDialogProps) {
   };
 
   const handleClear = () => {
-    if (confirm('Are you sure you want to remove your API key?')) {
+    if (confirm('Are you sure you want to remove your API configuration?')) {
       localStorage.removeItem(STORAGE_KEY);
       localStorage.removeItem(MODEL_KEY);
+      localStorage.removeItem(URL_KEY);
       setApiKey('');
+      setApiUrl('https://api.deepseek.com/v1');
       setHasExistingKey(false);
     }
   };
@@ -89,9 +110,31 @@ export function ApiKeyDialog({ onClose }: ApiKeyDialogProps) {
         </CardHeader>
         
         <CardContent className="space-y-4">
+          {/* Error Display */}
+          {error && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          {/* API URL Input */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">API URL</label>
+            <Input
+              type="text"
+              value={apiUrl}
+              onChange={(e) => setApiUrl(e.target.value)}
+              placeholder="https://api.deepseek.com/v1"
+            />
+            <p className="text-xs text-muted-foreground">
+              The base URL for the DeepSeek API endpoint
+            </p>
+          </div>
+
           {/* API Key Input */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">DeepSeek API Key</label>
+            <label className="text-sm font-medium">API Key</label>
             <div className="flex gap-2">
               <div className="relative flex-1">
                 <Input
