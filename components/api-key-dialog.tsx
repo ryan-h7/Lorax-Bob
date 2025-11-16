@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Settings, Eye, EyeOff, Check, X, AlertCircle } from 'lucide-react';
+import { Settings, Eye, EyeOff, Check, X, AlertCircle, Loader2 } from 'lucide-react';
 
 interface ApiKeyDialogProps {
   onClose?: () => void;
@@ -29,6 +29,8 @@ export function ApiKeyDialog({ onClose }: ApiKeyDialogProps) {
   const [saved, setSaved] = useState(false);
   const [hasExistingKey, setHasExistingKey] = useState(false);
   const [error, setError] = useState('');
+  const [testing, setTesting] = useState(false);
+  const [testSuccess, setTestSuccess] = useState(false);
 
   useEffect(() => {
     // Load existing key, URL, and model on mount
@@ -83,6 +85,76 @@ export function ApiKeyDialog({ onClose }: ApiKeyDialogProps) {
       setSaved(false);
       onClose?.();
     }, 1500);
+  };
+
+  const handleTest = async () => {
+    setError('');
+    setTestSuccess(false);
+    
+    if (!apiUrl.trim()) {
+      setError('Please enter an API URL');
+      return;
+    }
+
+    if (!apiKey.trim()) {
+      setError('Please enter an API key');
+      return;
+    }
+
+    // Validate URL format
+    try {
+      new URL(apiUrl);
+    } catch (e) {
+      setError('Please enter a valid URL');
+      return;
+    }
+
+    setTesting(true);
+
+    try {
+      // Make a test API call
+      const response = await fetch(`${apiUrl}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: selectedModel,
+          messages: [
+            {
+              role: 'user',
+              content: 'Hi'
+            }
+          ],
+          max_tokens: 10
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: { message: response.statusText } }));
+        throw new Error(
+          errorData.error?.message || 
+          errorData.message || 
+          `API returned status ${response.status}: ${response.statusText}`
+        );
+      }
+
+      const data = await response.json();
+      
+      if (data.choices && data.choices.length > 0) {
+        setTestSuccess(true);
+        setError('');
+      } else {
+        throw new Error('Invalid response format from API');
+      }
+    } catch (err: any) {
+      console.error('Test error:', err);
+      setError(`Connection test failed: ${err.message}`);
+      setTestSuccess(false);
+    } finally {
+      setTesting(false);
+    }
   };
 
   const handleClear = () => {
@@ -196,6 +268,16 @@ export function ApiKeyDialog({ onClose }: ApiKeyDialogProps) {
             </div>
           </div>
 
+          {/* Test Success Display */}
+          {testSuccess && !error && (
+            <Alert className="bg-green-50 border-green-200">
+              <Check className="h-4 w-4 text-green-600" />
+              <AlertDescription className="text-green-800">
+                ✓ Connection test successful! API is working correctly.
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* Info Alert */}
           <Alert>
             <AlertDescription className="text-xs">
@@ -206,6 +288,20 @@ export function ApiKeyDialog({ onClose }: ApiKeyDialogProps) {
 
           {/* Buttons */}
           <div className="flex gap-2">
+            <Button 
+              onClick={handleTest} 
+              variant="outline"
+              disabled={testing || !apiKey.trim() || !apiUrl.trim()}
+            >
+              {testing ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Testing...
+                </>
+              ) : (
+                'Test Connection'
+              )}
+            </Button>
             <Button 
               onClick={handleSave} 
               className="flex-1"
