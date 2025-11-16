@@ -333,9 +333,6 @@ export function ChatInterface({ onNavigateToJournal }: ChatInterfaceProps) {
 
   // Public function for Clear button - shows confirmation
   const handleClearChat = async () => {
-    if (!confirm('Are you sure you want to clear this conversation?')) {
-      return;
-    }
     await clearChatInternal();
   };
 
