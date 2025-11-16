@@ -460,7 +460,7 @@ export function ChatInterface({ onNavigateToJournal }: ChatInterfaceProps) {
                 <Settings className="w-4 h-4 mr-2" />
                 {hasApiKey ? 'Settings' : 'Setup'}
               </Button>
-              {initialLoadComplete && messages.length > 2 && startMood && !endMood && (
+              {true && (
                 <Button
                   variant="ghost"
                   size="sm"
