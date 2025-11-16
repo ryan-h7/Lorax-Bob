@@ -49,14 +49,103 @@ export async function POST(request: NextRequest) {
 
     // Handle greeting request specially
     if (isGreeting && message === '[GREETING_REQUEST]') {
-      // Get journal context for continuity
-      const journalContext = getRecentJournalContext();
+      // Build comprehensive context from ALL stored user data
+      const { getUserFacts } = await import('@/lib/user-memory');
+      const { getJournalEntries } = await import('@/lib/journal');
       
-      // Get user facts context
-      const userFactsContext = formatFactsForContext();
+      // Get ALL user facts from localStorage
+      const allUserFacts = getUserFacts();
+      let userFactsSection = '';
       
-      // Combine all context
-      const fullContext = journalContext + userFactsContext;
+      if (allUserFacts.length > 0) {
+        userFactsSection = '\n\n=== REMEMBERED FACTS ABOUT USER ===\n';
+        
+        // Group by type for better organization
+        const factsByType = {
+          person: allUserFacts.filter(f => f.type === 'person'),
+          place: allUserFacts.filter(f => f.type === 'place'),
+          thing: allUserFacts.filter(f => f.type === 'thing'),
+          event: allUserFacts.filter(f => f.type === 'event'),
+          mood: allUserFacts.filter(f => f.type === 'mood'),
+          action: allUserFacts.filter(f => f.type === 'action'),
+          date: allUserFacts.filter(f => f.type === 'date')
+        };
+        
+        if (factsByType.person.length > 0) {
+          userFactsSection += '\nPeople in their life:\n' + factsByType.person.map(f => 
+            `  - ${f.content}${f.context ? ` (${f.context})` : ''}`
+          ).join('\n');
+        }
+        if (factsByType.place.length > 0) {
+          userFactsSection += '\n\nPlaces:\n' + factsByType.place.map(f => 
+            `  - ${f.content}${f.context ? ` (${f.context})` : ''}`
+          ).join('\n');
+        }
+        if (factsByType.event.length > 0) {
+          userFactsSection += '\n\nUpcoming/Recent Events:\n' + factsByType.event.map(f => 
+            `  - ${f.content}${f.context ? ` (${f.context})` : ''} [Importance: ${f.importance}]`
+          ).join('\n');
+        }
+        if (factsByType.mood.length > 0) {
+          userFactsSection += '\n\nRecent Emotional States:\n' + factsByType.mood.map(f => 
+            `  - ${f.content}${f.context ? ` (${f.context})` : ''}`
+          ).join('\n');
+        }
+        if (factsByType.action.length > 0) {
+          userFactsSection += '\n\nActions/Goals:\n' + factsByType.action.map(f => 
+            `  - ${f.content}${f.context ? ` (${f.context})` : ''}`
+          ).join('\n');
+        }
+        if (factsByType.thing.length > 0) {
+          userFactsSection += '\n\nImportant Things/Topics:\n' + factsByType.thing.map(f => 
+            `  - ${f.content}${f.context ? ` (${f.context})` : ''}`
+          ).join('\n');
+        }
+        if (factsByType.date.length > 0) {
+          userFactsSection += '\n\nImportant Dates:\n' + factsByType.date.map(f => 
+            `  - ${f.content}${f.context ? ` (${f.context})` : ''}`
+          ).join('\n');
+        }
+      }
+      
+      // Get ALL journal entries from localStorage
+      const allJournalEntries = getJournalEntries();
+      let journalSection = '';
+      
+      if (allJournalEntries.length > 0) {
+        journalSection = '\n\n=== PAST CONVERSATION SUMMARIES ===\n';
+        
+        // Get up to 10 most recent entries for context (to avoid token overflow)
+        const recentEntries = allJournalEntries.slice(0, 10);
+        
+        journalSection += recentEntries.map((entry, index) => {
+          const daysAgo = Math.floor((Date.now() - entry.timestamp) / (1000 * 60 * 60 * 24));
+          const timeAgo = daysAgo === 0 ? 'earlier today' : 
+                          daysAgo === 1 ? 'yesterday' : 
+                          `${daysAgo} days ago`;
+          
+          let entryText = `\n[${timeAgo}] Mood: ${entry.startMood} → ${entry.endMood}`;
+          entryText += `\nSummary: ${entry.summary}`;
+          
+          if (entry.keyPoints && entry.keyPoints.length > 0) {
+            entryText += `\nKey points: ${entry.keyPoints.join('; ')}`;
+          }
+          
+          if (entry.developments && entry.developments.length > 0) {
+            entryText += `\nDevelopments: ${entry.developments.join('; ')}`;
+          }
+          
+          if (entry.aiInterpretation) {
+            entryText += `\n⚠️ Improvement note: ${entry.aiInterpretation}`;
+          }
+          
+          return entryText;
+        }).join('\n---\n');
+        
+        if (allJournalEntries.length > 10) {
+          journalSection += `\n\n(${allJournalEntries.length - 10} older conversations not shown)`;
+        }
+      }
       
       // Get current time info for personalized greeting
       const hour = new Date().getHours();
@@ -67,29 +156,37 @@ export async function POST(request: NextRequest) {
         hour >= 12 && hour < 17 ? 'afternoon' :
         hour >= 17 && hour < 21 ? 'evening' : 'night';
       
-      // Create greeting prompt
+      // Combine ALL context
+      const comprehensiveContext = userFactsSection + journalSection;
+      
+      // Create greeting prompt with full context
       const greetingMessages = [
         {
           role: 'system' as const,
-          content: `You are a compassionate, empathetic listener. The user is starting a new conversation with you. Generate a warm, personalized greeting based on the time of day and any relevant context you have about them.
+          content: `You are a compassionate, empathetic listener. The user is starting a NEW conversation with you right now.
 
-${fullContext}
+Below is EVERYTHING you know about this user from past conversations and extracted facts. Use this information to create a personalized, natural greeting.
 
-Current time: It's ${timeOfDay} (${hour}:00).
+${comprehensiveContext || '(This is the user\'s first conversation with you - no prior context available)'}
 
-Instructions:
+Current time: It's ${timeOfDay} (${hour}:00 hours).
+
+INSTRUCTIONS FOR GREETING:
 - Keep it conversational and natural (1-2 sentences max)
 - If it's very late/early, acknowledge that thoughtfully
-- If you know about recent events or moods from the context, you can naturally reference them
+- If you know about recent events (especially high-importance ones), you can naturally ask about them
+- If you remember recent moods or concerns, you can check in on them
 - Ask an open-ended question to start the conversation
-- Be warm and welcoming
+- Be warm, welcoming, and show you remember them
+- Don't list everything you know - just naturally reference ONE relevant thing if appropriate
 
 Example tones:
 - Late night: "What has you up so late tonight?"
-- With context: "Hey! How did [recent event] go?"
-- General: "How are you feeling this ${timeOfDay}?"
+- With recent event: "Hey! How did that job interview go?"
+- With recent mood: "Hi there! Are you still feeling anxious about the presentation?"
+- First time/no context: "How are you feeling this ${timeOfDay}?"
 
-Generate only the greeting message, nothing else.`
+Generate ONLY the greeting message, nothing else.`
         },
         {
           role: 'user' as const,
