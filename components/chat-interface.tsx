@@ -812,16 +812,7 @@ export function ChatInterface({ onNavigateToJournal, onBackgroundUpdate }: ChatI
     <div className="flex flex-col h-full max-w-4xl mx-auto">
       <Card className="flex flex-col flex-1 overflow-hidden bg-background/95 backdrop-blur-sm">
         <CardHeader className="border-b">
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Heart className="w-5 h-5 text-rose-500" />
-                Supportive Listener
-              </CardTitle>
-              <CardDescription>
-                A safe space to share what&apos;s on your mind
-              </CardDescription>
-            </div>
+          <div className="flex items-center justify-end">
             <div className="flex gap-2">
               {/* Avatar Selector */}
               <Select value={selectedAvatar} onValueChange={setSelectedAvatar}>
