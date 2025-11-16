@@ -82,9 +82,17 @@ export function ChatInterface({ onNavigateToJournal }: ChatInterfaceProps) {
       if (moodState) {
         try {
           const parsed = JSON.parse(moodState);
-          setStartMood(parsed.startMood || null);
-          setEndMood(parsed.endMood || null);
-          setConversationStarted(parsed.conversationStarted || false);
+          console.log('Loading mood state from localStorage:', parsed);
+          
+          if (parsed.startMood !== undefined && parsed.startMood !== null) {
+            setStartMood(parsed.startMood);
+          }
+          if (parsed.endMood !== undefined && parsed.endMood !== null) {
+            setEndMood(parsed.endMood);
+          }
+          if (parsed.conversationStarted !== undefined) {
+            setConversationStarted(parsed.conversationStarted);
+          }
         } catch (error) {
           console.error('Failed to parse stored mood state:', error);
         }
@@ -139,6 +147,17 @@ export function ChatInterface({ onNavigateToJournal }: ChatInterfaceProps) {
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
+
+  // Debug: Log button visibility conditions
+  useEffect(() => {
+    console.log('Button visibility check:', {
+      initialLoadComplete,
+      messagesLength: messages.length,
+      startMood,
+      endMood,
+      shouldShow: initialLoadComplete && messages.length > 2 && startMood && !endMood
+    });
+  }, [initialLoadComplete, messages.length, startMood, endMood]);
 
   const handleStartMoodRating = (mood: number) => {
     setStartMood(mood);
