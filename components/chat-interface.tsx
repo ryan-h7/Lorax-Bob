@@ -74,9 +74,10 @@ const BACKGROUND_BLUR_KEY = 'ai-therapist-background-blur';
 
 interface ChatInterfaceProps {
   onNavigateToJournal?: () => void;
+  onBackgroundUpdate?: (background: string | null, opacity: number, blur: number) => void;
 }
 
-export function ChatInterface({ onNavigateToJournal }: ChatInterfaceProps) {
+export function ChatInterface({ onNavigateToJournal, onBackgroundUpdate }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -758,6 +759,11 @@ export function ChatInterface({ onNavigateToJournal }: ChatInterfaceProps) {
         localStorage.removeItem(BACKGROUND_BLUR_KEY);
       }
     }
+    
+    // Update parent component (page.tsx) with new background settings
+    if (onBackgroundUpdate) {
+      onBackgroundUpdate(background, opacity, blur);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -803,23 +809,8 @@ export function ChatInterface({ onNavigateToJournal }: ChatInterfaceProps) {
   };
 
   return (
-    <div className="relative flex flex-col h-screen max-w-4xl mx-auto p-4">
-      {/* Background Image */}
-      {backgroundImage && (
-        <div 
-          className="fixed inset-0 z-0 pointer-events-none"
-          style={{
-            backgroundImage: `url(${backgroundImage})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat',
-            opacity: backgroundOpacity / 100,
-            filter: `blur(${backgroundBlur}px)`
-          }}
-        />
-      )}
-      
-      <Card className="relative z-10 flex flex-col flex-1 overflow-hidden bg-background/95 backdrop-blur-sm">
+    <div className="flex flex-col h-full max-w-4xl mx-auto">
+      <Card className="flex flex-col flex-1 overflow-hidden bg-background/95 backdrop-blur-sm">
         <CardHeader className="border-b">
           <div className="flex items-center justify-between">
             <div>
