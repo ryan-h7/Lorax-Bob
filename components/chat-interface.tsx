@@ -116,6 +116,7 @@ export function ChatInterface({ onNavigateToJournal, onBackgroundUpdate, uiTrans
   const [conversationStarted, setConversationStarted] = useState(false);
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [sessionActive, setSessionActive] = useState(false); // Track if user wants to start a session
   
   // Tone preference
   const [tone, setTone] = useState<string>('empathetic');
@@ -168,10 +169,19 @@ export function ChatInterface({ onNavigateToJournal, onBackgroundUpdate, uiTrans
           }
           if (parsed.conversationStarted !== undefined) {
             setConversationStarted(parsed.conversationStarted);
+            // If conversation was started, set session as active
+            if (parsed.conversationStarted) {
+              setSessionActive(true);
+            }
           }
         } catch (error) {
           console.error('Failed to parse stored mood state:', error);
         }
+      }
+      
+      // If there are stored messages, session should be active
+      if (stored && stored.length > 0) {
+        setSessionActive(true);
       }
 
       // Load tone preference
@@ -276,7 +286,7 @@ export function ChatInterface({ onNavigateToJournal, onBackgroundUpdate, uiTrans
     }
   }, [messages]);
 
-  // Check for API key and show start mood rating ONLY on initial load
+  // Check for API key and show start mood rating when session is started
   useEffect(() => {
     if (typeof window !== 'undefined' && initialLoadComplete) {
       const apiKey = localStorage.getItem('deepseek-api-key');
@@ -285,8 +295,8 @@ export function ChatInterface({ onNavigateToJournal, onBackgroundUpdate, uiTrans
       // Show dialog if no API key is set
       if (!apiKey) {
         setShowApiDialog(true);
-      } else if (messages.length === 0 && !conversationStarted && !startMood) {
-        // Show start mood rating ONLY if truly a new conversation
+      } else if (sessionActive && messages.length === 0 && !conversationStarted && !startMood) {
+        // Show start mood rating ONLY when user explicitly starts a session
         setShowStartMoodRating(true);
       } else if (messages.length > 0 && !startMood && !conversationStarted) {
         // Orphaned conversation detected: messages exist but no mood state
@@ -296,11 +306,11 @@ export function ChatInterface({ onNavigateToJournal, onBackgroundUpdate, uiTrans
         if (typeof window !== 'undefined') {
           localStorage.removeItem(STORAGE_KEY);
         }
-        // Show start mood rating for a fresh start
-        setShowStartMoodRating(true);
+        // Don't auto-show rating - wait for user to start session
+        setSessionActive(false);
       }
     }
-  }, [initialLoadComplete, messages.length, startMood, conversationStarted]); // Check when state updates
+  }, [initialLoadComplete, messages.length, startMood, conversationStarted, sessionActive]); // Check when state updates
 
   // Focus input on mount
   useEffect(() => {
@@ -533,6 +543,7 @@ export function ChatInterface({ onNavigateToJournal, onBackgroundUpdate, uiTrans
         setStartMood(null);
         setEndMood(null);
         setConversationStarted(false);
+        setSessionActive(false); // Reset session so user needs to click "Start Session"
         
         // Clear localStorage
         if (typeof window !== 'undefined') {
@@ -824,6 +835,10 @@ export function ChatInterface({ onNavigateToJournal, onBackgroundUpdate, uiTrans
       });
       setMessages([]);
       setCrisis({ detected: false, severity: 'none' });
+      setStartMood(null);
+      setEndMood(null);
+      setConversationStarted(false);
+      setSessionActive(false); // Reset session so user needs to click "Start Session"
       
       // Clear localStorage
       if (typeof window !== 'undefined') {
@@ -999,6 +1014,15 @@ export function ChatInterface({ onNavigateToJournal, onBackgroundUpdate, uiTrans
                   <p className="text-xs text-muted-foreground/70">
                     Note: I&apos;m not a therapist or counselor - just a supportive listener.
                   </p>
+                  {!sessionActive && (
+                    <Button 
+                      onClick={() => setSessionActive(true)}
+                      size="lg"
+                      className="mt-6"
+                    >
+                      Start Session
+                    </Button>
+                  )}
                 </div>
               </div>
             ) : (
