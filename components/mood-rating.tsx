@@ -66,19 +66,6 @@ export function MoodRating({ title, description, onRate, showSkip }: MoodRatingP
               <span>Very Difficult</span>
               <span>Great</span>
             </div>
-
-            {/* Selected Mood Description - Always reserve space */}
-            <div className="text-center p-3 rounded-lg bg-muted min-h-[52px] flex items-center justify-center">
-              {selectedMood ? (
-                <p className="text-sm font-medium" style={{ color: getMoodColor(selectedMood) }}>
-                  {getMoodLabel(selectedMood)}
-                </p>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  Select a mood rating above
-                </p>
-              )}
-            </div>
           </div>
 
           {/* Buttons - Always visible */}
