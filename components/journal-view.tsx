@@ -59,8 +59,8 @@ export function JournalView() {
   return (
     <div className="h-full flex flex-col lg:flex-row gap-4">
       {/* Journal List */}
-      <Card className="flex-1 flex flex-col">
-        <CardHeader className="border-b">
+      <Card className="flex-1 flex flex-col bg-background/50 backdrop-blur-sm border-2">
+        <CardHeader className="border-b border-border/50">
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="flex items-center gap-2">
@@ -194,8 +194,8 @@ export function JournalView() {
 
       {/* Entry Details */}
       {selectedEntry && (
-        <Card className="flex-1 flex flex-col">
-          <CardHeader className="border-b">
+        <Card className="flex-1 flex flex-col bg-background/50 backdrop-blur-sm border-2">
+          <CardHeader className="border-b border-border/50">
             <CardTitle>Entry Details</CardTitle>
             <CardDescription>
               {new Date(selectedEntry.timestamp).toLocaleDateString('en-US', {

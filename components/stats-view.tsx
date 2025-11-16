@@ -71,7 +71,7 @@ export function StatsView() {
   if (entries.length === 0) {
     return (
       <div className="h-full flex items-center justify-center">
-        <Card className="max-w-md">
+        <Card className="max-w-md bg-background/50 backdrop-blur-sm border-2">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <BarChart3 className="w-5 h-5" />
@@ -90,7 +90,7 @@ export function StatsView() {
     <div className="h-full overflow-auto p-4 space-y-4">
       {/* Overview Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card>
+        <Card className="bg-background/50 backdrop-blur-sm border-2">
           <CardHeader className="pb-2">
             <CardDescription>Total Entries</CardDescription>
           </CardHeader>
@@ -99,7 +99,7 @@ export function StatsView() {
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="bg-background/50 backdrop-blur-sm border-2">
           <CardHeader className="pb-2">
             <CardDescription>Avg Start Mood</CardDescription>
           </CardHeader>
@@ -110,7 +110,7 @@ export function StatsView() {
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="bg-background/50 backdrop-blur-sm border-2">
           <CardHeader className="pb-2">
             <CardDescription>Avg End Mood</CardDescription>
           </CardHeader>
@@ -121,7 +121,7 @@ export function StatsView() {
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="bg-background/50 backdrop-blur-sm border-2">
           <CardHeader className="pb-2">
             <CardDescription>Improvement Rate</CardDescription>
           </CardHeader>
@@ -140,7 +140,7 @@ export function StatsView() {
         
         {/* Last 7 Entries Chart */}
         <TabsContent value="entries">
-          <Card>
+          <Card className="bg-background/50 backdrop-blur-sm border-2">
             <CardHeader>
               <CardTitle>Mood Progression - Last 7 Entries</CardTitle>
               <CardDescription>Track how your mood changed across your recent conversations</CardDescription>
@@ -176,7 +176,7 @@ export function StatsView() {
         
         {/* Timeline Chart */}
         <TabsContent value="timeline">
-          <Card>
+          <Card className="bg-background/50 backdrop-blur-sm border-2">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>

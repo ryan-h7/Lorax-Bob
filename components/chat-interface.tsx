@@ -822,8 +822,8 @@ export function ChatInterface({ onNavigateToJournal, onBackgroundUpdate }: ChatI
 
   return (
     <div className="flex flex-col h-full max-w-4xl mx-auto">
-      <Card className="flex flex-col flex-1 overflow-hidden bg-background/95 backdrop-blur-sm">
-        <CardHeader className="border-b">
+      <Card className="flex flex-col flex-1 overflow-hidden bg-background/50 backdrop-blur-sm border-2">
+        <CardHeader className="border-b border-border/50">
           <div className="flex items-center justify-end">
             <div className="flex gap-2">
               {/* Avatar Selector */}
@@ -993,10 +993,10 @@ export function ChatInterface({ onNavigateToJournal, onBackgroundUpdate }: ChatI
                         </div>
                       )}
                       <div
-                        className={`max-w-[80%] rounded-lg px-4 py-2 ${
+                        className={`max-w-[80%] rounded-lg px-4 py-2 border-2 ${
                           msg.role === 'user'
-                            ? 'bg-primary text-primary-foreground'
-                            : 'bg-muted'
+                            ? 'bg-primary/50 text-primary-foreground border-primary'
+                            : 'bg-muted/50 border-border'
                         }`}
                       >
                         <p className="whitespace-pre-wrap break-words">{msg.content}</p>
@@ -1013,7 +1013,7 @@ export function ChatInterface({ onNavigateToJournal, onBackgroundUpdate }: ChatI
                 })}
                 {isLoading && (
                   <div className="flex justify-start">
-                    <div className="bg-muted rounded-lg px-4 py-2">
+                    <div className="bg-muted/50 rounded-lg px-4 py-2 border-2 border-border">
                       <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
                     </div>
                   </div>
