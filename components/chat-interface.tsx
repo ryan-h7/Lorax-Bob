@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Send, Loader2, AlertCircle, Heart, Trash2, Settings } from 'lucide-react';
+import { Send, Loader2, AlertCircle, Heart, Trash2, Settings, BookOpen } from 'lucide-react';
 import { ApiKeyDialog } from './api-key-dialog';
 import { MoodRating } from './mood-rating';
 import { saveJournalEntry } from '@/lib/journal';
@@ -193,6 +193,13 @@ export function ChatInterface({ onNavigateToJournal }: ChatInterfaceProps) {
     return endPhrases.some(phrase => lowerAssistant.includes(phrase));
   };
 
+  const handleEndConversation = () => {
+    if (startMood && !endMood && messages.length > 2) {
+      // Trigger end mood rating
+      setShowEndMoodRating(true);
+    }
+  };
+
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
 
@@ -347,6 +354,18 @@ export function ChatInterface({ onNavigateToJournal }: ChatInterfaceProps) {
                 <Settings className="w-4 h-4 mr-2" />
                 {hasApiKey ? 'Settings' : 'Setup'}
               </Button>
+              {messages.length > 2 && startMood && !endMood && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleEndConversation}
+                  className="text-muted-foreground"
+                  title="End conversation and save to journal"
+                >
+                  <BookOpen className="w-4 h-4 mr-2" />
+                  End & Save
+                </Button>
+              )}
               {messages.length > 0 && (
                 <Button
                   variant="ghost"

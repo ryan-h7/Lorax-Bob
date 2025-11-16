@@ -33,17 +33,27 @@ export async function POST(request: NextRequest) {
       .join('\n\n');
 
     // Request summary from DeepSeek
-    const summaryPrompt = `Please analyze the following therapy conversation and provide:
+    const summaryPrompt = `Please analyze the following therapy conversation and create a journal entry. Provide:
 
-1. A brief 2-3 sentence summary of the conversation
-2. Key points discussed (3-5 bullet points)
-3. Any developments or insights gained (2-4 bullet points)
+1. A concise summary (2-3 sentences) focusing on:
+   - What happened that day (important events the user mentioned)
+   - How the user was feeling emotionally
+   - The overall tone of the conversation
+
+2. Key points discussed (3-5 specific topics or events mentioned)
+
+3. Developments or insights (2-4 bullet points about:
+   - Any progress or breakthroughs
+   - Important realizations
+   - Emotional changes during conversation)
+
+Write as if this is a personal journal memo that captures the essence of the day.
 
 Format your response as JSON with this structure:
 {
-  "summary": "brief summary here",
-  "keyPoints": ["point 1", "point 2", "point 3"],
-  "developments": ["development 1", "development 2"]
+  "summary": "concise memo-style summary here",
+  "keyPoints": ["specific event or topic 1", "event or topic 2", "event or topic 3"],
+  "developments": ["insight or progress 1", "insight or progress 2"]
 }
 
 Conversation:
