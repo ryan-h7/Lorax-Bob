@@ -1,17 +1,5 @@
 // Journal entry management for mood tracking and conversation summaries
 
-// Helper function for mood colors
-export function getMoodColor(mood: number): string {
-  const colors = {
-    1: '#dc2626', // red-600
-    2: '#f97316', // orange-500
-    3: '#eab308', // yellow-500
-    4: '#84cc16', // lime-500
-    5: '#22c55e', // green-500
-  };
-  return colors[mood as keyof typeof colors] || colors[3];
-}
-
 export interface JournalEntry {
   id: string;
   timestamp: number;
