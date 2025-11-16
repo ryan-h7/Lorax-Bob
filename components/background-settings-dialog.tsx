@@ -6,15 +6,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Upload, X, Image as ImageIcon, Clock } from 'lucide-react';
+import { Upload, X, Image as ImageIcon, Clock, Palette } from 'lucide-react';
 
 interface BackgroundSettingsDialogProps {
   currentBackground: string | null;
   currentOpacity: number;
   currentBlur: number;
-  currentMode: 'custom' | 'time-based';
+  currentMode: 'custom' | 'time-based' | 'gradient';
   currentUiTransparency: number;
-  onSave: (background: string | null, opacity: number, blur: number, mode: 'custom' | 'time-based', uiTransparency: number) => void;
+  onSave: (background: string | null, opacity: number, blur: number, mode: 'custom' | 'time-based' | 'gradient', uiTransparency: number) => void;
   onCancel: () => void;
 }
 
@@ -27,11 +27,12 @@ export function BackgroundSettingsDialog({
   onSave, 
   onCancel 
 }: BackgroundSettingsDialogProps) {
-  const [mode, setMode] = useState<'custom' | 'time-based'>(currentMode);
+  const [mode, setMode] = useState<'custom' | 'time-based' | 'gradient'>(currentMode);
   const [backgroundUrl, setBackgroundUrl] = useState<string | null>(currentBackground);
   const [opacity, setOpacity] = useState(currentOpacity);
   const [blur, setBlur] = useState(currentBlur);
   const [uiTransparency, setUiTransparency] = useState(currentUiTransparency);
+  const [selectedGradient, setSelectedGradient] = useState('sunset');
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -60,7 +61,45 @@ export function BackgroundSettingsDialog({
   };
 
   const handleSave = () => {
-    onSave(backgroundUrl, opacity, blur, mode, uiTransparency);
+    // Store gradient selection if in gradient mode
+    const bgToSave = mode === 'gradient' ? `gradient:${selectedGradient}` : backgroundUrl;
+    onSave(bgToSave, opacity, blur, mode, uiTransparency);
+  };
+
+  // Predefined gradient themes
+  const gradients = {
+    sunset: {
+      name: 'Sunset Bliss',
+      gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)'
+    },
+    ocean: {
+      name: 'Ocean Breeze',
+      gradient: 'linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%)'
+    },
+    forest: {
+      name: 'Forest Dawn',
+      gradient: 'linear-gradient(135deg, #134e5e 0%, #71b280 100%)'
+    },
+    lavender: {
+      name: 'Lavender Dreams',
+      gradient: 'linear-gradient(135deg, #a8c0ff 0%, #3f2b96 100%)'
+    },
+    peach: {
+      name: 'Peachy Keen',
+      gradient: 'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)'
+    },
+    northern: {
+      name: 'Northern Lights',
+      gradient: 'linear-gradient(135deg, #00d2ff 0%, #3a47d5 50%, #7928ca 100%)'
+    },
+    fire: {
+      name: 'Fire & Ice',
+      gradient: 'linear-gradient(135deg, #f12711 0%, #f5af19 50%, #06beb6 100%)'
+    },
+    candy: {
+      name: 'Cotton Candy',
+      gradient: 'linear-gradient(135deg, #ffecd2 0%, #fcb69f 33%, #ff9a9e 66%, #fad0c4 100%)'
+    }
   };
 
   // Get time-based gradient for preview
@@ -119,7 +158,7 @@ export function BackgroundSettingsDialog({
           {/* Mode Selector */}
           <div className="space-y-2">
             <Label>Background Mode</Label>
-            <Select value={mode} onValueChange={(value: 'custom' | 'time-based') => setMode(value)}>
+            <Select value={mode} onValueChange={(value: 'custom' | 'time-based' | 'gradient') => setMode(value)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -136,9 +175,44 @@ export function BackgroundSettingsDialog({
                     Auto (Time of Day)
                   </div>
                 </SelectItem>
+                <SelectItem value="gradient">
+                  <div className="flex items-center gap-2">
+                    <Palette className="w-4 h-4" />
+                    Gradient Theme
+                  </div>
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
+
+          {/* Gradient Selector (only for gradient mode) */}
+          {mode === 'gradient' && (
+            <div className="space-y-3">
+              <Label>Choose Gradient</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {Object.entries(gradients).map(([key, value]) => (
+                  <button
+                    key={key}
+                    onClick={() => setSelectedGradient(key)}
+                    className={`relative h-20 rounded-lg overflow-hidden border-2 transition-all ${
+                      selectedGradient === key 
+                        ? 'border-primary ring-2 ring-primary/20 scale-105' 
+                        : 'border-border hover:border-primary/50'
+                    }`}
+                  >
+                    <div 
+                      className="absolute inset-0"
+                      style={{ background: value.gradient }}
+                    />
+                    <div className="absolute inset-0 bg-black/20" />
+                    <div className="absolute bottom-0 left-0 right-0 bg-black/60 backdrop-blur-sm p-2">
+                      <p className="text-xs font-medium text-white">{value.name}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Background Preview */}
           <div className="space-y-2">
@@ -155,6 +229,18 @@ export function BackgroundSettingsDialog({
                     className="absolute inset-0"
                     style={{
                       background: getTimeBasedGradient(),
+                      opacity: opacity / 100,
+                      filter: `blur(${blur}px)`
+                    }}
+                  />
+                  <div className="absolute inset-0 bg-white/20" />
+                </>
+              ) : mode === 'gradient' ? (
+                <>
+                  <div
+                    className="absolute inset-0"
+                    style={{
+                      background: gradients[selectedGradient as keyof typeof gradients].gradient,
                       opacity: opacity / 100,
                       filter: `blur(${blur}px)`
                     }}
@@ -219,7 +305,7 @@ export function BackgroundSettingsDialog({
           )}
 
           {/* Opacity Slider */}
-          {(mode === 'time-based' || backgroundUrl) && (
+          {(mode === 'time-based' || mode === 'gradient' || backgroundUrl) && (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label>Opacity</Label>
@@ -237,7 +323,7 @@ export function BackgroundSettingsDialog({
           )}
 
           {/* Blur Slider */}
-          {(mode === 'time-based' || backgroundUrl) && (
+          {(mode === 'time-based' || mode === 'gradient' || backgroundUrl) && (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label>Blur</Label>
@@ -278,6 +364,8 @@ export function BackgroundSettingsDialog({
             <p className="text-xs text-muted-foreground">
               {mode === 'time-based' 
                 ? '🌅 Background changes automatically throughout the day: night sky, sunrise, sunny day, sunset, and evening'
+                : mode === 'gradient'
+                ? '🎨 Choose from beautiful gradient themes to set the mood for your conversations'
                 : '💡 Tip: Lower opacity and higher blur help maintain chat readability'
               }
             </p>

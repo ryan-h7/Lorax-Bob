@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { ChatInterface } from '@/components/chat-interface';
 import { JournalView } from '@/components/journal-view';
 import { StatsView } from '@/components/stats-view';
+import { AnimatedBackground } from '@/components/animated-background';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { MessageSquare, BookOpen, BarChart3 } from 'lucide-react';
 import { getTimeBasedGradient } from '@/lib/time-background';
@@ -14,12 +15,24 @@ const BACKGROUND_BLUR_KEY = 'ai-therapist-background-blur';
 const BACKGROUND_MODE_KEY = 'ai-therapist-background-mode';
 const UI_TRANSPARENCY_KEY = 'ai-therapist-ui-transparency';
 
+// Predefined gradient themes
+const gradients: Record<string, string> = {
+  sunset: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)',
+  ocean: 'linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%)',
+  forest: 'linear-gradient(135deg, #134e5e 0%, #71b280 100%)',
+  lavender: 'linear-gradient(135deg, #a8c0ff 0%, #3f2b96 100%)',
+  peach: 'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)',
+  northern: 'linear-gradient(135deg, #00d2ff 0%, #3a47d5 50%, #7928ca 100%)',
+  fire: 'linear-gradient(135deg, #f12711 0%, #f5af19 50%, #06beb6 100%)',
+  candy: 'linear-gradient(135deg, #ffecd2 0%, #fcb69f 33%, #ff9a9e 66%, #fad0c4 100%)'
+};
+
 export default function Home() {
   const [activeTab, setActiveTab] = useState('chat');
   const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
   const [backgroundOpacity, setBackgroundOpacity] = useState(30);
   const [backgroundBlur, setBackgroundBlur] = useState(5);
-  const [backgroundMode, setBackgroundMode] = useState<'custom' | 'time-based'>('custom');
+  const [backgroundMode, setBackgroundMode] = useState<'custom' | 'time-based' | 'gradient'>('custom');
   const [timeGradient, setTimeGradient] = useState<string>(getTimeBasedGradient());
   const [uiTransparency, setUiTransparency] = useState(50);
 
@@ -39,7 +52,7 @@ export default function Home() {
         setBackgroundBlur(parseInt(savedBlur, 10));
       }
       const savedMode = localStorage.getItem(BACKGROUND_MODE_KEY);
-      if (savedMode === 'time-based' || savedMode === 'custom') {
+      if (savedMode === 'time-based' || savedMode === 'custom' || savedMode === 'gradient') {
         setBackgroundMode(savedMode);
       }
       const savedUiTransparency = localStorage.getItem(UI_TRANSPARENCY_KEY);
@@ -60,7 +73,7 @@ export default function Home() {
     }
   }, [backgroundMode]);
 
-  const handleBackgroundUpdate = (background: string | null, opacity: number, blur: number, mode: 'custom' | 'time-based') => {
+  const handleBackgroundUpdate = (background: string | null, opacity: number, blur: number, mode: 'custom' | 'time-based' | 'gradient') => {
     setBackgroundImage(background);
     setBackgroundOpacity(opacity);
     setBackgroundBlur(blur);
@@ -72,17 +85,19 @@ export default function Home() {
 
   return (
     <main className="relative min-h-screen bg-gradient-to-b from-background to-secondary/20">
-      {/* Background - Custom Image or Time-based Gradient */}
+      {/* Background - Custom Image, Time-based Animated Scene, or Gradient */}
       {backgroundMode === 'time-based' ? (
+        <AnimatedBackground opacity={backgroundOpacity} blur={backgroundBlur} />
+      ) : backgroundMode === 'gradient' && backgroundImage?.startsWith('gradient:') ? (
         <div 
           className="fixed inset-0 z-0 pointer-events-none transition-all duration-1000"
           style={{
-            background: timeGradient,
+            background: gradients[backgroundImage.replace('gradient:', '')],
             opacity: backgroundOpacity / 100,
             filter: `blur(${backgroundBlur}px)`
           }}
         />
-      ) : backgroundImage && (
+      ) : backgroundImage && !backgroundImage.startsWith('gradient:') ? (
         <div 
           className="fixed inset-0 z-0 pointer-events-none"
           style={{
@@ -94,7 +109,7 @@ export default function Home() {
             filter: `blur(${backgroundBlur}px)`
           }}
         />
-      )}
+      ) : null}
 
       <div className="relative z-10 h-screen flex flex-col p-4">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">

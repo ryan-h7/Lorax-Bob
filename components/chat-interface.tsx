@@ -76,7 +76,7 @@ const UI_TRANSPARENCY_KEY = 'ai-therapist-ui-transparency';
 
 interface ChatInterfaceProps {
   onNavigateToJournal?: () => void;
-  onBackgroundUpdate?: (background: string | null, opacity: number, blur: number, mode: 'custom' | 'time-based') => void;
+  onBackgroundUpdate?: (background: string | null, opacity: number, blur: number, mode: 'custom' | 'time-based' | 'gradient') => void;
   uiTransparency?: number;
   onUiTransparencyUpdate?: (transparency: number) => void;
 }
@@ -123,7 +123,7 @@ export function ChatInterface({ onNavigateToJournal, onBackgroundUpdate, uiTrans
   const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
   const [backgroundOpacity, setBackgroundOpacity] = useState(30);
   const [backgroundBlur, setBackgroundBlur] = useState(5);
-  const [backgroundMode, setBackgroundMode] = useState<'custom' | 'time-based'>('custom');
+  const [backgroundMode, setBackgroundMode] = useState<'custom' | 'time-based' | 'gradient'>('custom');
   const [showBackgroundDialog, setShowBackgroundDialog] = useState(false);
   
   // UI transparency (use prop if provided, otherwise use local state)
@@ -205,7 +205,7 @@ export function ChatInterface({ onNavigateToJournal, onBackgroundUpdate, uiTrans
         setBackgroundBlur(parseInt(savedBlur, 10));
       }
       const savedMode = localStorage.getItem(BACKGROUND_MODE_KEY);
-      if (savedMode === 'time-based' || savedMode === 'custom') {
+      if (savedMode === 'time-based' || savedMode === 'custom' || savedMode === 'gradient') {
         setBackgroundMode(savedMode);
       }
       
@@ -760,7 +760,7 @@ export function ChatInterface({ onNavigateToJournal, onBackgroundUpdate, uiTrans
     setShowAvatarDialog(false);
   };
 
-  const handleSaveBackground = (background: string | null, opacity: number, blur: number, mode: 'custom' | 'time-based', newUiTransparency: number) => {
+  const handleSaveBackground = (background: string | null, opacity: number, blur: number, mode: 'custom' | 'time-based' | 'gradient', newUiTransparency: number) => {
     setBackgroundImage(background);
     setBackgroundOpacity(opacity);
     setBackgroundBlur(blur);
@@ -780,6 +780,11 @@ export function ChatInterface({ onNavigateToJournal, onBackgroundUpdate, uiTrans
           localStorage.setItem(BACKGROUND_KEY, background);
         } else {
           localStorage.removeItem(BACKGROUND_KEY);
+        }
+      } else if (mode === 'gradient') {
+        // Store gradient selection
+        if (background) {
+          localStorage.setItem(BACKGROUND_KEY, background);
         }
       } else {
         // For time-based mode, we don't need to store an image
