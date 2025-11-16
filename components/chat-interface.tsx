@@ -455,6 +455,11 @@ export function ChatInterface({ onNavigateToJournal }: ChatInterfaceProps) {
     setIsLoading(true);
 
     try {
+      // Get user facts and journal entries from localStorage (client-side)
+      const userFacts = getUserFacts();
+      const { getJournalEntries } = require('@/lib/journal');
+      const journalEntries = getJournalEntries();
+      
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
@@ -466,7 +471,9 @@ export function ChatInterface({ onNavigateToJournal }: ChatInterfaceProps) {
           apiKey,
           apiUrl: apiUrl || 'https://api.deepseek.com/v1',
           model: model || 'deepseek-v3',
-          tone
+          tone,
+          userFacts, // Send user facts with every message
+          journalEntries // Send journal entries with every message
         })
       });
 

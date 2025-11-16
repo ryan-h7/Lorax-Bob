@@ -248,14 +248,65 @@ Generate ONLY the greeting message, nothing else.`
       }
     }
 
-    // Get journal context for continuity
-    const journalContext = getRecentJournalContext();
+    // Build context from client-sent data (userFacts and journalEntries)
+    const allUserFacts = userFacts || [];
+    const allJournalEntries = journalEntries || [];
     
-    // Get user facts context
-    const userFactsContext = formatFactsForContext();
+    console.log('💬 [CHAT] User facts count:', allUserFacts.length);
+    console.log('💬 [CHAT] Journal entries count:', allJournalEntries.length);
+    
+    // Format user facts for context
+    let userFactsContext = '';
+    if (allUserFacts.length > 0) {
+      const factsByType = {
+        person: allUserFacts.filter((f: UserFact) => f.type === 'person'),
+        place: allUserFacts.filter((f: UserFact) => f.type === 'place'),
+        event: allUserFacts.filter((f: UserFact) => f.type === 'event'),
+        mood: allUserFacts.filter((f: UserFact) => f.type === 'mood'),
+        action: allUserFacts.filter((f: UserFact) => f.type === 'action'),
+      };
+      
+      const factParts = [];
+      if (factsByType.person.length > 0) {
+        factParts.push('People: ' + factsByType.person.map((f: UserFact) => f.content).join(', '));
+      }
+      if (factsByType.place.length > 0) {
+        factParts.push('Places: ' + factsByType.place.map((f: UserFact) => f.content).join(', '));
+      }
+      if (factsByType.event.length > 0) {
+        factParts.push('Events: ' + factsByType.event.map((f: UserFact) => 
+          f.content + (f.context ? ` (${f.context})` : '')
+        ).join('; '));
+      }
+      if (factsByType.mood.length > 0) {
+        factParts.push('Recent moods: ' + factsByType.mood.map((f: UserFact) => f.content).join(', '));
+      }
+      if (factsByType.action.length > 0) {
+        factParts.push('Actions/Goals: ' + factsByType.action.map((f: UserFact) => f.content).join('; '));
+      }
+      
+      if (factParts.length > 0) {
+        userFactsContext = '\n\nRemembered facts: ' + factParts.join('\n');
+      }
+    }
+    
+    // Format journal entries for context (last 3)
+    let journalContext = '';
+    if (allJournalEntries.length > 0) {
+      const recentEntries = allJournalEntries.slice(0, 3);
+      const contextParts = recentEntries.map((entry: JournalEntry) => {
+        const daysAgo = Math.floor((Date.now() - entry.timestamp) / (1000 * 60 * 60 * 24));
+        const timeAgo = daysAgo === 0 ? 'earlier today' : 
+                        daysAgo === 1 ? 'yesterday' : 
+                        `${daysAgo} days ago`;
+        return `${timeAgo}: ${entry.summary.substring(0, 100)}`;
+      });
+      
+      journalContext = '\n\nRecent conversations: ' + contextParts.join('; ');
+    }
     
     // Combine all context
-    const fullContext = journalContext + userFactsContext;
+    const fullContext = userFactsContext + journalContext;
     
     // Get messages for API call with full context and tone
     const apiMessages = memory.getMessagesForAPI(fullContext, tone || 'empathetic');
