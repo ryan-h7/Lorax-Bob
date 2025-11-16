@@ -8,6 +8,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Send, Loader2, AlertCircle, Heart, Trash2, Settings } from 'lucide-react';
 import { ApiKeyDialog } from './api-key-dialog';
+import { MoodRating } from './mood-rating';
+import { saveJournalEntry } from '@/lib/journal';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -23,7 +25,11 @@ interface CrisisInfo {
 const STORAGE_KEY = 'ai-therapist-conversation';
 const SESSION_KEY = 'ai-therapist-session-id';
 
-export function ChatInterface() {
+interface ChatInterfaceProps {
+  onNavigateToJournal?: () => void;
+}
+
+export function ChatInterface({ onNavigateToJournal }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -42,6 +48,14 @@ export function ChatInterface() {
   const [crisis, setCrisis] = useState<CrisisInfo>({ detected: false, severity: 'none' });
   const [showApiDialog, setShowApiDialog] = useState(false);
   const [hasApiKey, setHasApiKey] = useState(false);
+  
+  // Mood tracking states
+  const [showStartMoodRating, setShowStartMoodRating] = useState(false);
+  const [showEndMoodRating, setShowEndMoodRating] = useState(false);
+  const [startMood, setStartMood] = useState<number | null>(null);
+  const [endMood, setEndMood] = useState<number | null>(null);
+  const [conversationStarted, setConversationStarted] = useState(false);
+  
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -74,7 +88,7 @@ export function ChatInterface() {
     }
   }, [messages]);
 
-  // Check for API key on mount
+  // Check for API key and show start mood rating on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const apiKey = localStorage.getItem('deepseek-api-key');
@@ -83,14 +97,101 @@ export function ChatInterface() {
       // Show dialog if no API key is set
       if (!apiKey) {
         setShowApiDialog(true);
+      } else if (messages.length === 0 && !conversationStarted && !startMood) {
+        // Show start mood rating if new conversation
+        setShowStartMoodRating(true);
       }
     }
-  }, []);
+  }, [messages.length, conversationStarted, startMood]);
 
   // Focus input on mount
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
+
+  const handleStartMoodRating = (mood: number) => {
+    setStartMood(mood);
+    setShowStartMoodRating(false);
+    setConversationStarted(true);
+  };
+
+  const handleEndMoodRating = async (mood: number) => {
+    setEndMood(mood);
+    setShowEndMoodRating(false);
+
+    // Generate summary and save journal entry
+    if (startMood) {
+      await generateAndSaveJournal(mood);
+    }
+  };
+
+  const generateAndSaveJournal = async (finalMood: number) => {
+    try {
+      const apiKey = typeof window !== 'undefined' ? localStorage.getItem('deepseek-api-key') : null;
+      const apiUrl = typeof window !== 'undefined' ? localStorage.getItem('deepseek-api-url') : 'https://api.deepseek.com/v1';
+      const model = typeof window !== 'undefined' ? localStorage.getItem('deepseek-model') : 'deepseek-v3';
+
+      if (!apiKey) return;
+
+      // Request summary from API
+      const response = await fetch('/api/summarize', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messages: messages.map(m => ({ role: m.role, content: m.content })),
+          apiKey,
+          apiUrl: apiUrl || 'https://api.deepseek.com/v1',
+          model: model || 'deepseek-v3'
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Save journal entry
+        saveJournalEntry({
+          startMood: startMood!,
+          endMood: finalMood,
+          moodChange: finalMood - startMood!,
+          summary: data.summary || 'No summary available',
+          keyPoints: data.keyPoints || [],
+          developments: data.developments || [],
+          conversationLength: messages.length
+        });
+
+        // Show success message and navigate to journal
+        const successMessage: Message = {
+          role: 'assistant',
+          content: `📔 Your conversation has been saved to your journal. You can view it in the Journal tab. Take care! 💙`,
+          timestamp: Date.now()
+        };
+        setMessages(prev => [...prev, successMessage]);
+
+        // Clear conversation after a delay and navigate to journal
+        setTimeout(() => {
+          handleClearChat();
+          onNavigateToJournal?.();
+        }, 3000);
+      }
+    } catch (error) {
+      console.error('Failed to generate summary:', error);
+    }
+  };
+
+  const checkForEndOfConversation = (userMessage: string, assistantMessage: string) => {
+    const endPhrases = [
+      'do you have anything else',
+      'anything else to talk about',
+      'anything else on your mind',
+      'would you like to talk about anything else',
+      'is there anything else'
+    ];
+
+    const lowerAssistant = assistantMessage.toLowerCase();
+    return endPhrases.some(phrase => lowerAssistant.includes(phrase));
+  };
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
@@ -151,6 +252,24 @@ export function ChatInterface() {
           detected: true,
           severity: data.crisisSeverity
         });
+      }
+
+      // Check if this might be end of conversation
+      if (checkForEndOfConversation(userMessage.content, data.message)) {
+        // Wait for user's next response to see if they say "no"
+        // This will be handled in the next message send
+      }
+
+      // Check if user said "no" to continuing conversation
+      const userSaidNo = /^(no|nope|nah|not really|nothing|that's all|i'm good|all good)\.?$/i.test(userMessage.content.trim());
+      const previousMessageAskedToContinue = messages.length > 0 && 
+        checkForEndOfConversation('', messages[messages.length - 1]?.content || '');
+
+      if (userSaidNo && previousMessageAskedToContinue && startMood && !endMood) {
+        // Trigger end mood rating
+        setTimeout(() => {
+          setShowEndMoodRating(true);
+        }, 1000);
       }
 
     } catch (error: any) {
@@ -359,6 +478,24 @@ export function ChatInterface() {
               setHasApiKey(!!apiKey);
             }
           }} 
+        />
+      )}
+
+      {/* Start Mood Rating */}
+      {showStartMoodRating && (
+        <MoodRating
+          title="How are you feeling right now?"
+          description="Rate your mood from 1 (very difficult) to 5 (great) before we begin"
+          onRate={handleStartMoodRating}
+        />
+      )}
+
+      {/* End Mood Rating */}
+      {showEndMoodRating && (
+        <MoodRating
+          title="How are you feeling now?"
+          description="Rate your mood from 1 (very difficult) to 5 (great) after our conversation"
+          onRate={handleEndMoodRating}
         />
       )}
     </div>
