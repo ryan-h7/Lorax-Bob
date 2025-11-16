@@ -407,11 +407,20 @@ export function ChatInterface({ onNavigateToJournal }: ChatInterfaceProps) {
       setMessages(prev => {
         const newMessages = [...prev, assistantMessage];
         
-        // Extract facts every 3 user messages (6 total messages)
-        if (newMessages.length >= 6 && newMessages.length % 6 === 0) {
-          console.log('Triggering fact extraction at', newMessages.length, 'messages');
+        console.log('Message added, total messages:', newMessages.length);
+        
+        // Extract facts every 5 messages (after ~2-3 exchanges)
+        // Using modulo 5 to account for the initial greeting message
+        if (newMessages.length >= 5 && (newMessages.length - 1) % 5 === 0) {
+          console.log('✅ Condition met! Triggering fact extraction at', newMessages.length, 'messages');
           // Use setTimeout to ensure state is updated
           setTimeout(() => extractFacts(newMessages), 100);
+        } else {
+          console.log('Condition not met:', {
+            length: newMessages.length,
+            checkValue: (newMessages.length - 1) % 5,
+            willTriggerAt: Math.ceil(newMessages.length / 5) * 5 + 1
+          });
         }
         
         return newMessages;
