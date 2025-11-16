@@ -314,11 +314,8 @@ export function ChatInterface({ onNavigateToJournal }: ChatInterfaceProps) {
     }
   };
 
-  const handleClearChat = async () => {
-    if (!confirm('Are you sure you want to clear this conversation?')) {
-      return;
-    }
-
+  // Internal function to clear chat without confirmation (used after saving journal)
+  const clearChatInternal = async () => {
     try {
       await fetch(`/api/chat?sessionId=${sessionId}`, {
         method: 'DELETE'
@@ -334,6 +331,14 @@ export function ChatInterface({ onNavigateToJournal }: ChatInterfaceProps) {
     } catch (error) {
       console.error('Error clearing chat:', error);
     }
+  };
+
+  // Public function for Clear button - shows confirmation
+  const handleClearChat = async () => {
+    if (!confirm('Are you sure you want to clear this conversation?')) {
+      return;
+    }
+    await clearChatInternal();
   };
 
   const formatTime = (timestamp: number) => {
