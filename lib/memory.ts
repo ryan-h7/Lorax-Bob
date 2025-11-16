@@ -45,13 +45,13 @@ export class MemoryManager {
    * Get messages formatted for API call
    * Returns system prompt + summaries + recent messages
    */
-  getMessagesForAPI(): Message[] {
+  getMessagesForAPI(journalContext?: string): Message[] {
     const messages: Message[] = [];
 
-    // Add system prompt with memory context
+    // Add system prompt with memory context and journal context
     messages.push({
       role: 'system',
-      content: this.getSystemPrompt()
+      content: this.getSystemPrompt(journalContext)
     });
 
     // Add summary of older conversations if exists
@@ -103,8 +103,14 @@ export class MemoryManager {
   /**
    * Get the system prompt with empathetic, supportive instructions
    */
-  private getSystemPrompt(): string {
-    return `You are a compassionate, empathetic listener providing emotional support. Your role is to be "someone to talk to" for people who need to vent, process feelings, or work through difficult emotions.
+  getSystemPrompt(journalContext?: string): string {
+    let prompt = `You are a compassionate, empathetic listener providing emotional support. Your role is to be "someone to talk to" for people who need to vent, process feelings, or work through difficult emotions.`;
+    
+    if (journalContext) {
+      prompt += `\n\n${journalContext}\n\nUse this context to show continuity and remember past conversations. Reference previous topics naturally when relevant.`;
+    }
+    
+    return prompt + `\n
 
 Core principles:
 - You are NOT a therapist, counselor, or medical professional. Never present yourself as one.

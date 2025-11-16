@@ -113,6 +113,18 @@ export function ChatInterface({ onNavigateToJournal }: ChatInterfaceProps) {
     setStartMood(mood);
     setShowStartMoodRating(false);
     setConversationStarted(true);
+    
+    // Add personalized greeting as first message
+    const { getTimeBasedGreeting } = require('@/lib/greeting');
+    const greeting = getTimeBasedGreeting();
+    
+    const greetingMessage: Message = {
+      role: 'assistant',
+      content: greeting,
+      timestamp: Date.now()
+    };
+    
+    setMessages([greetingMessage]);
   };
 
   const handleEndMoodRating = async (mood: number) => {
@@ -161,19 +173,21 @@ export function ChatInterface({ onNavigateToJournal }: ChatInterfaceProps) {
           conversationLength: messages.length
         });
 
-        // Show success message and navigate to journal
-        const successMessage: Message = {
-          role: 'assistant',
-          content: `📔 Your conversation has been saved to your journal. You can view it in the Journal tab. Take care! 💙`,
-          timestamp: Date.now()
-        };
-        setMessages(prev => [...prev, successMessage]);
-
-        // Clear conversation after a delay and navigate to journal
+        // Clear conversation and navigate to journal immediately
+        setMessages([]);
+        setStartMood(null);
+        setEndMood(null);
+        setConversationStarted(false);
+        
+        // Clear localStorage
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem(STORAGE_KEY);
+        }
+        
+        // Navigate to journal to view the saved entry
         setTimeout(() => {
-          handleClearChat();
           onNavigateToJournal?.();
-        }, 3000);
+        }, 500);
       }
     } catch (error) {
       console.error('Failed to generate summary:', error);
