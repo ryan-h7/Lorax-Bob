@@ -5,23 +5,27 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
-import { Upload, X, Image as ImageIcon } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Upload, X, Image as ImageIcon, Clock } from 'lucide-react';
 
 interface BackgroundSettingsDialogProps {
   currentBackground: string | null;
   currentOpacity: number;
   currentBlur: number;
-  onSave: (background: string | null, opacity: number, blur: number) => void;
+  currentMode: 'custom' | 'time-based';
+  onSave: (background: string | null, opacity: number, blur: number, mode: 'custom' | 'time-based') => void;
   onCancel: () => void;
 }
 
 export function BackgroundSettingsDialog({ 
   currentBackground, 
   currentOpacity, 
-  currentBlur, 
+  currentBlur,
+  currentMode, 
   onSave, 
   onCancel 
 }: BackgroundSettingsDialogProps) {
+  const [mode, setMode] = useState<'custom' | 'time-based'>(currentMode);
   const [backgroundUrl, setBackgroundUrl] = useState<string | null>(currentBackground);
   const [opacity, setOpacity] = useState(currentOpacity);
   const [blur, setBlur] = useState(currentBlur);
@@ -53,7 +57,49 @@ export function BackgroundSettingsDialog({
   };
 
   const handleSave = () => {
-    onSave(backgroundUrl, opacity, blur);
+    onSave(backgroundUrl, opacity, blur, mode);
+  };
+
+  // Get time-based gradient for preview
+  const getTimeBasedGradient = () => {
+    const hour = new Date().getHours();
+    
+    // Late night (12am-4am): Deep night sky
+    if (hour >= 0 && hour < 4) {
+      return 'linear-gradient(to bottom, #0f172a 0%, #1e1b4b 50%, #312e81 100%)';
+    }
+    // Early morning (4am-6am): Pre-dawn
+    else if (hour >= 4 && hour < 6) {
+      return 'linear-gradient(to bottom, #1e1b4b 0%, #4c1d95 40%, #7e22ce 70%, #fb923c 100%)';
+    }
+    // Sunrise (6am-8am): Warm sunrise
+    else if (hour >= 6 && hour < 8) {
+      return 'linear-gradient(to bottom, #fb923c 0%, #fbbf24 30%, #fde047 60%, #bae6fd 100%)';
+    }
+    // Morning (8am-11am): Bright morning
+    else if (hour >= 8 && hour < 11) {
+      return 'linear-gradient(to bottom, #60a5fa 0%, #93c5fd 50%, #dbeafe 100%)';
+    }
+    // Noon (11am-2pm): Midday sun
+    else if (hour >= 11 && hour < 14) {
+      return 'linear-gradient(to bottom, #3b82f6 0%, #60a5fa 40%, #fef08a 100%)';
+    }
+    // Afternoon (2pm-5pm): Afternoon sun
+    else if (hour >= 14 && hour < 17) {
+      return 'linear-gradient(to bottom, #60a5fa 0%, #93c5fd 50%, #fef3c7 100%)';
+    }
+    // Sunset (5pm-7pm): Golden hour
+    else if (hour >= 17 && hour < 19) {
+      return 'linear-gradient(to bottom, #f97316 0%, #fb923c 30%, #fbbf24 60%, #7c3aed 100%)';
+    }
+    // Dusk (7pm-9pm): Twilight
+    else if (hour >= 19 && hour < 21) {
+      return 'linear-gradient(to bottom, #4c1d95 0%, #6b21a8 40%, #1e40af 80%, #1e293b 100%)';
+    }
+    // Night (9pm-12am): Evening sky
+    else {
+      return 'linear-gradient(to bottom, #1e293b 0%, #312e81 50%, #1e1b4b 100%)';
+    }
   };
 
   return (
@@ -67,6 +113,30 @@ export function BackgroundSettingsDialog({
         </CardHeader>
         
         <CardContent className="space-y-6">
+          {/* Mode Selector */}
+          <div className="space-y-2">
+            <Label>Background Mode</Label>
+            <Select value={mode} onValueChange={(value: 'custom' | 'time-based') => setMode(value)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="custom">
+                  <div className="flex items-center gap-2">
+                    <ImageIcon className="w-4 h-4" />
+                    Custom Image
+                  </div>
+                </SelectItem>
+                <SelectItem value="time-based">
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4" />
+                    Auto (Time of Day)
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Background Preview */}
           <div className="space-y-2">
             <Label>Preview</Label>
@@ -76,7 +146,19 @@ export function BackgroundSettingsDialog({
                 backgroundColor: '#f0f0f0'
               }}
             >
-              {backgroundUrl && (
+              {mode === 'time-based' ? (
+                <>
+                  <div
+                    className="absolute inset-0"
+                    style={{
+                      background: getTimeBasedGradient(),
+                      opacity: opacity / 100,
+                      filter: `blur(${blur}px)`
+                    }}
+                  />
+                  <div className="absolute inset-0 bg-white/20" />
+                </>
+              ) : backgroundUrl ? (
                 <>
                   <div
                     className="absolute inset-0"
@@ -90,7 +172,7 @@ export function BackgroundSettingsDialog({
                   />
                   <div className="absolute inset-0 bg-white/30" />
                 </>
-              )}
+              ) : null}
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="bg-white rounded-lg px-4 py-2 shadow-lg">
                   <p className="text-sm font-medium">Chat Interface</p>
@@ -99,10 +181,11 @@ export function BackgroundSettingsDialog({
             </div>
           </div>
 
-          {/* Image Upload */}
-          <div className="space-y-2">
-            <Label>Background Image</Label>
-            {backgroundUrl ? (
+          {/* Image Upload (only for custom mode) */}
+          {mode === 'custom' && (
+            <div className="space-y-2">
+              <Label>Background Image</Label>
+              {backgroundUrl ? (
               <div className="flex items-center gap-2">
                 <div className="flex-1 p-2 border rounded flex items-center gap-2">
                   <ImageIcon className="w-4 h-4 text-muted-foreground" />
@@ -129,10 +212,11 @@ export function BackgroundSettingsDialog({
                 />
               </label>
             )}
-          </div>
+            </div>
+          )}
 
           {/* Opacity Slider */}
-          {backgroundUrl && (
+          {(mode === 'time-based' || backgroundUrl) && (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label>Opacity</Label>
@@ -150,7 +234,7 @@ export function BackgroundSettingsDialog({
           )}
 
           {/* Blur Slider */}
-          {backgroundUrl && (
+          {(mode === 'time-based' || backgroundUrl) && (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label>Blur</Label>
@@ -170,7 +254,10 @@ export function BackgroundSettingsDialog({
           {/* Info */}
           <div className="bg-muted rounded-lg p-3">
             <p className="text-xs text-muted-foreground">
-              💡 Tip: Lower opacity and higher blur help maintain chat readability
+              {mode === 'time-based' 
+                ? '🌅 Background changes automatically throughout the day: night sky, sunrise, sunny day, sunset, and evening'
+                : '💡 Tip: Lower opacity and higher blur help maintain chat readability'
+              }
             </p>
           </div>
 

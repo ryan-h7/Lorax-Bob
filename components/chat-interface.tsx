@@ -71,10 +71,11 @@ const CUSTOM_AVATARS_KEY = 'ai-therapist-custom-avatars';
 const BACKGROUND_KEY = 'ai-therapist-background';
 const BACKGROUND_OPACITY_KEY = 'ai-therapist-background-opacity';
 const BACKGROUND_BLUR_KEY = 'ai-therapist-background-blur';
+const BACKGROUND_MODE_KEY = 'ai-therapist-background-mode';
 
 interface ChatInterfaceProps {
   onNavigateToJournal?: () => void;
-  onBackgroundUpdate?: (background: string | null, opacity: number, blur: number) => void;
+  onBackgroundUpdate?: (background: string | null, opacity: number, blur: number, mode: 'custom' | 'time-based') => void;
 }
 
 export function ChatInterface({ onNavigateToJournal, onBackgroundUpdate }: ChatInterfaceProps) {
@@ -119,6 +120,7 @@ export function ChatInterface({ onNavigateToJournal, onBackgroundUpdate }: ChatI
   const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
   const [backgroundOpacity, setBackgroundOpacity] = useState(30);
   const [backgroundBlur, setBackgroundBlur] = useState(5);
+  const [backgroundMode, setBackgroundMode] = useState<'custom' | 'time-based'>('custom');
   const [showBackgroundDialog, setShowBackgroundDialog] = useState(false);
   
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -194,6 +196,10 @@ export function ChatInterface({ onNavigateToJournal, onBackgroundUpdate }: ChatI
       const savedBlur = localStorage.getItem(BACKGROUND_BLUR_KEY);
       if (savedBlur) {
         setBackgroundBlur(parseInt(savedBlur, 10));
+      }
+      const savedMode = localStorage.getItem(BACKGROUND_MODE_KEY);
+      if (savedMode === 'time-based' || savedMode === 'custom') {
+        setBackgroundMode(savedMode);
       }
 
       setInitialLoadComplete(true);
@@ -741,28 +747,34 @@ export function ChatInterface({ onNavigateToJournal, onBackgroundUpdate }: ChatI
     setShowAvatarDialog(false);
   };
 
-  const handleSaveBackground = (background: string | null, opacity: number, blur: number) => {
+  const handleSaveBackground = (background: string | null, opacity: number, blur: number, mode: 'custom' | 'time-based') => {
     setBackgroundImage(background);
     setBackgroundOpacity(opacity);
     setBackgroundBlur(blur);
+    setBackgroundMode(mode);
     setShowBackgroundDialog(false);
     
     // Save to localStorage
     if (typeof window !== 'undefined') {
-      if (background) {
-        localStorage.setItem(BACKGROUND_KEY, background);
-        localStorage.setItem(BACKGROUND_OPACITY_KEY, opacity.toString());
-        localStorage.setItem(BACKGROUND_BLUR_KEY, blur.toString());
+      localStorage.setItem(BACKGROUND_MODE_KEY, mode);
+      localStorage.setItem(BACKGROUND_OPACITY_KEY, opacity.toString());
+      localStorage.setItem(BACKGROUND_BLUR_KEY, blur.toString());
+      
+      if (mode === 'custom') {
+        if (background) {
+          localStorage.setItem(BACKGROUND_KEY, background);
+        } else {
+          localStorage.removeItem(BACKGROUND_KEY);
+        }
       } else {
+        // For time-based mode, we don't need to store an image
         localStorage.removeItem(BACKGROUND_KEY);
-        localStorage.removeItem(BACKGROUND_OPACITY_KEY);
-        localStorage.removeItem(BACKGROUND_BLUR_KEY);
       }
     }
     
     // Update parent component (page.tsx) with new background settings
     if (onBackgroundUpdate) {
-      onBackgroundUpdate(background, opacity, blur);
+      onBackgroundUpdate(background, opacity, blur, mode);
     }
   };
 
@@ -1097,6 +1109,7 @@ export function ChatInterface({ onNavigateToJournal, onBackgroundUpdate }: ChatI
           currentBackground={backgroundImage}
           currentOpacity={backgroundOpacity}
           currentBlur={backgroundBlur}
+          currentMode={backgroundMode}
           onSave={handleSaveBackground}
           onCancel={() => setShowBackgroundDialog(false)}
         />

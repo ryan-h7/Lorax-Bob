@@ -6,16 +6,20 @@ import { JournalView } from '@/components/journal-view';
 import { StatsView } from '@/components/stats-view';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { MessageSquare, BookOpen, BarChart3 } from 'lucide-react';
+import { getTimeBasedGradient } from '@/lib/time-background';
 
 const BACKGROUND_KEY = 'ai-therapist-background';
 const BACKGROUND_OPACITY_KEY = 'ai-therapist-background-opacity';
 const BACKGROUND_BLUR_KEY = 'ai-therapist-background-blur';
+const BACKGROUND_MODE_KEY = 'ai-therapist-background-mode';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState('chat');
   const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
   const [backgroundOpacity, setBackgroundOpacity] = useState(30);
   const [backgroundBlur, setBackgroundBlur] = useState(5);
+  const [backgroundMode, setBackgroundMode] = useState<'custom' | 'time-based'>('custom');
+  const [timeGradient, setTimeGradient] = useState<string>(getTimeBasedGradient());
 
   // Load background settings from localStorage
   useEffect(() => {
@@ -32,19 +36,47 @@ export default function Home() {
       if (savedBlur) {
         setBackgroundBlur(parseInt(savedBlur, 10));
       }
+      const savedMode = localStorage.getItem(BACKGROUND_MODE_KEY);
+      if (savedMode === 'time-based' || savedMode === 'custom') {
+        setBackgroundMode(savedMode);
+      }
     }
   }, []);
 
-  const handleBackgroundUpdate = (background: string | null, opacity: number, blur: number) => {
+  // Update time-based gradient every minute
+  useEffect(() => {
+    if (backgroundMode === 'time-based') {
+      const interval = setInterval(() => {
+        setTimeGradient(getTimeBasedGradient());
+      }, 60000); // Update every minute
+
+      return () => clearInterval(interval);
+    }
+  }, [backgroundMode]);
+
+  const handleBackgroundUpdate = (background: string | null, opacity: number, blur: number, mode: 'custom' | 'time-based') => {
     setBackgroundImage(background);
     setBackgroundOpacity(opacity);
     setBackgroundBlur(blur);
+    setBackgroundMode(mode);
+    if (mode === 'time-based') {
+      setTimeGradient(getTimeBasedGradient());
+    }
   };
 
   return (
     <main className="relative min-h-screen bg-gradient-to-b from-background to-secondary/20">
-      {/* Background Image */}
-      {backgroundImage && (
+      {/* Background - Custom Image or Time-based Gradient */}
+      {backgroundMode === 'time-based' ? (
+        <div 
+          className="fixed inset-0 z-0 pointer-events-none transition-all duration-1000"
+          style={{
+            background: timeGradient,
+            opacity: backgroundOpacity / 100,
+            filter: `blur(${backgroundBlur}px)`
+          }}
+        />
+      ) : backgroundImage && (
         <div 
           className="fixed inset-0 z-0 pointer-events-none"
           style={{
