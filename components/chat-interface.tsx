@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Send, Loader2, AlertCircle, Heart, Trash2 } from 'lucide-react';
+import { Send, Loader2, AlertCircle, Heart, Trash2, Settings } from 'lucide-react';
+import { ApiKeyDialog } from './api-key-dialog';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -39,6 +40,8 @@ export function ChatInterface() {
     return newId;
   });
   const [crisis, setCrisis] = useState<CrisisInfo>({ detected: false, severity: 'none' });
+  const [showApiDialog, setShowApiDialog] = useState(false);
+  const [hasApiKey, setHasApiKey] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -71,6 +74,19 @@ export function ChatInterface() {
     }
   }, [messages]);
 
+  // Check for API key on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const apiKey = localStorage.getItem('deepseek-api-key');
+      setHasApiKey(!!apiKey);
+      
+      // Show dialog if no API key is set
+      if (!apiKey) {
+        setShowApiDialog(true);
+      }
+    }
+  }, []);
+
   // Focus input on mount
   useEffect(() => {
     inputRef.current?.focus();
@@ -78,6 +94,15 @@ export function ChatInterface() {
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
+
+    // Check for API key
+    const apiKey = typeof window !== 'undefined' ? localStorage.getItem('deepseek-api-key') : null;
+    const model = typeof window !== 'undefined' ? localStorage.getItem('deepseek-model') : 'deepseek-v3';
+    
+    if (!apiKey) {
+      setShowApiDialog(true);
+      return;
+    }
 
     const userMessage: Message = {
       role: 'user',
@@ -97,7 +122,9 @@ export function ChatInterface() {
         },
         body: JSON.stringify({
           message: userMessage.content,
-          sessionId
+          sessionId,
+          apiKey,
+          model: model || 'deepseek-v3'
         })
       });
 
@@ -187,17 +214,29 @@ export function ChatInterface() {
                 A safe space to share what&apos;s on your mind
               </CardDescription>
             </div>
-            {messages.length > 0 && (
+            <div className="flex gap-2">
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={handleClearChat}
+                onClick={() => setShowApiDialog(true)}
                 className="text-muted-foreground"
+                title="API Settings"
               >
-                <Trash2 className="w-4 h-4 mr-2" />
-                Clear
+                <Settings className="w-4 h-4 mr-2" />
+                {hasApiKey ? 'Settings' : 'Setup'}
               </Button>
-            )}
+              {messages.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleClearChat}
+                  className="text-muted-foreground"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Clear
+                </Button>
+              )}
+            </div>
           </div>
         </CardHeader>
 
@@ -305,6 +344,20 @@ export function ChatInterface() {
           </div>
         </CardContent>
       </Card>
+
+      {/* API Key Configuration Dialog */}
+      {showApiDialog && (
+        <ApiKeyDialog 
+          onClose={() => {
+            setShowApiDialog(false);
+            // Recheck if API key exists after dialog closes
+            if (typeof window !== 'undefined') {
+              const apiKey = localStorage.getItem('deepseek-api-key');
+              setHasApiKey(!!apiKey);
+            }
+          }} 
+        />
+      )}
     </div>
   );
 }

@@ -8,11 +8,18 @@ const sessionMemories = new Map<string, MemoryManager>();
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { message, sessionId } = body;
+    const { message, sessionId, apiKey, model } = body;
 
     if (!message || typeof message !== 'string') {
       return NextResponse.json(
         { error: 'Message is required' },
+        { status: 400 }
+      );
+    }
+
+    if (!apiKey || typeof apiKey !== 'string') {
+      return NextResponse.json(
+        { error: 'API key is required' },
         { status: 400 }
       );
     }
@@ -24,8 +31,11 @@ export async function POST(request: NextRequest) {
     }
     const memory = sessionMemories.get(effectiveSessionId)!;
 
-    // Initialize DeepSeek client
-    const deepseek = new DeepSeekClient();
+    // Initialize DeepSeek client with user's API key and model
+    const deepseek = new DeepSeekClient({
+      apiKey,
+      model: model || 'deepseek-v3'
+    });
 
     // Check for crisis language
     const crisisCheck = await deepseek.detectCrisisLanguage(message);
