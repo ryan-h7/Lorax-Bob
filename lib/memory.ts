@@ -45,13 +45,13 @@ export class MemoryManager {
    * Get messages formatted for API call
    * Returns system prompt + summaries + recent messages
    */
-  getMessagesForAPI(): Message[] {
+  getMessagesForAPI(journalContext?: string, tone?: string, avatar?: { name: string; personality: string }): Message[] {
     const messages: Message[] = [];
 
-    // Add system prompt with memory context
+    // Add system prompt with memory context, journal context, tone, and avatar
     messages.push({
       role: 'system',
-      content: this.getSystemPrompt()
+      content: this.getSystemPrompt(journalContext, tone, avatar)
     });
 
     // Add summary of older conversations if exists
@@ -103,8 +103,29 @@ export class MemoryManager {
   /**
    * Get the system prompt with empathetic, supportive instructions
    */
-  private getSystemPrompt(): string {
-    return `You are a compassionate, empathetic listener providing emotional support. Your role is to be "someone to talk to" for people who need to vent, process feelings, or work through difficult emotions.
+  getSystemPrompt(journalContext?: string, tone?: string, avatar?: { name: string; personality: string }): string {
+    // Avatar introduction
+    let prompt = '';
+    if (avatar) {
+      prompt = `You are ${avatar.name}. ${avatar.personality}\n\n`;
+    }
+    
+    // Tone-specific introductions
+    const toneIntros = {
+      'empathetic': 'You are a compassionate, deeply empathetic listener providing emotional support. You prioritize warmth, understanding, and emotional validation.',
+      'humorous': 'You are a supportive listener with a light-hearted, humorous touch. While you take their feelings seriously, you use gentle humor to lighten the mood when appropriate. Be playful but never dismissive.',
+      'blunt': 'You are a direct, honest listener who provides straightforward emotional support. You say things as they are without sugar-coating, but always remain respectful and supportive.',
+      'therapist-like': 'You are a thoughtful, professional listener who uses therapeutic techniques. You ask probing questions, identify patterns, and help them develop insight into their emotions and behaviors.'
+    };
+
+    prompt += toneIntros[tone as keyof typeof toneIntros] || toneIntros['empathetic'];
+    prompt += ' Your role is to be "someone to talk to" for people who need to vent, process feelings, or work through difficult emotions.';
+    
+    if (journalContext) {
+      prompt += `\n\n${journalContext}\n\nUse this context to show continuity and remember past conversations. Reference previous topics naturally when relevant.`;
+    }
+    
+    return prompt + `\n
 
 Core principles:
 - You are NOT a therapist, counselor, or medical professional. Never present yourself as one.
