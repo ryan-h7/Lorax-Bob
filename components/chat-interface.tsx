@@ -6,12 +6,13 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Send, Loader2, AlertCircle, Heart, Trash2, Settings, BookOpen, MessageCircle, User, Plus } from 'lucide-react';
+import { Send, Loader2, AlertCircle, Heart, Trash2, Settings, BookOpen, MessageCircle, User, Plus, Image as ImageIcon } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ApiKeyDialog } from './api-key-dialog';
 import { MoodRating } from './mood-rating';
 import { MoodFeedback } from './mood-feedback';
 import { CustomAvatarDialog } from './custom-avatar-dialog';
+import { BackgroundSettingsDialog } from './background-settings-dialog';
 import { saveJournalEntry } from '@/lib/journal';
 import { saveUserFact, getUserFacts } from '@/lib/user-memory';
 
@@ -67,6 +68,9 @@ const MOOD_STATE_KEY = 'ai-therapist-mood-state';
 const TONE_KEY = 'ai-therapist-tone';
 const AVATAR_KEY = 'ai-therapist-avatar';
 const CUSTOM_AVATARS_KEY = 'ai-therapist-custom-avatars';
+const BACKGROUND_KEY = 'ai-therapist-background';
+const BACKGROUND_OPACITY_KEY = 'ai-therapist-background-opacity';
+const BACKGROUND_BLUR_KEY = 'ai-therapist-background-blur';
 
 interface ChatInterfaceProps {
   onNavigateToJournal?: () => void;
@@ -109,6 +113,12 @@ export function ChatInterface({ onNavigateToJournal }: ChatInterfaceProps) {
   const [selectedAvatar, setSelectedAvatar] = useState<string>('luna');
   const [customAvatars, setCustomAvatars] = useState<Avatar[]>([]);
   const [showAvatarDialog, setShowAvatarDialog] = useState(false);
+  
+  // Background settings
+  const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
+  const [backgroundOpacity, setBackgroundOpacity] = useState(30);
+  const [backgroundBlur, setBackgroundBlur] = useState(5);
+  const [showBackgroundDialog, setShowBackgroundDialog] = useState(false);
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -169,6 +179,20 @@ export function ChatInterface({ onNavigateToJournal }: ChatInterfaceProps) {
         } catch (error) {
           console.error('Failed to parse custom avatars:', error);
         }
+      }
+
+      // Load background settings
+      const savedBackground = localStorage.getItem(BACKGROUND_KEY);
+      if (savedBackground) {
+        setBackgroundImage(savedBackground);
+      }
+      const savedOpacity = localStorage.getItem(BACKGROUND_OPACITY_KEY);
+      if (savedOpacity) {
+        setBackgroundOpacity(parseInt(savedOpacity, 10));
+      }
+      const savedBlur = localStorage.getItem(BACKGROUND_BLUR_KEY);
+      if (savedBlur) {
+        setBackgroundBlur(parseInt(savedBlur, 10));
       }
 
       setInitialLoadComplete(true);
@@ -716,6 +740,26 @@ export function ChatInterface({ onNavigateToJournal }: ChatInterfaceProps) {
     setShowAvatarDialog(false);
   };
 
+  const handleSaveBackground = (background: string | null, opacity: number, blur: number) => {
+    setBackgroundImage(background);
+    setBackgroundOpacity(opacity);
+    setBackgroundBlur(blur);
+    setShowBackgroundDialog(false);
+    
+    // Save to localStorage
+    if (typeof window !== 'undefined') {
+      if (background) {
+        localStorage.setItem(BACKGROUND_KEY, background);
+        localStorage.setItem(BACKGROUND_OPACITY_KEY, opacity.toString());
+        localStorage.setItem(BACKGROUND_BLUR_KEY, blur.toString());
+      } else {
+        localStorage.removeItem(BACKGROUND_KEY);
+        localStorage.removeItem(BACKGROUND_OPACITY_KEY);
+        localStorage.removeItem(BACKGROUND_BLUR_KEY);
+      }
+    }
+  };
+
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -759,22 +803,24 @@ export function ChatInterface({ onNavigateToJournal }: ChatInterfaceProps) {
   };
 
   return (
-    <div className="relative flex flex-col h-screen w-full overflow-hidden">
+    <div className="relative flex flex-col h-screen max-w-4xl mx-auto p-4">
       {/* Background Image */}
-      <div 
-        className="absolute inset-0 z-0"
-        style={{
-          backgroundImage: 'url(/bright-path-bg.jpg)',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat'
-        }}
-      />
+      {backgroundImage && (
+        <div 
+          className="fixed inset-0 z-0 pointer-events-none"
+          style={{
+            backgroundImage: `url(${backgroundImage})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundRepeat: 'no-repeat',
+            opacity: backgroundOpacity / 100,
+            filter: `blur(${backgroundBlur}px)`
+          }}
+        />
+      )}
       
-      {/* Chat Interface - Floating in upper-middle area */}
-      <div className="relative z-10 flex-1 flex flex-col items-center pt-8 pb-4 px-4">
-        <Card className="w-full max-w-3xl h-[calc(100vh-250px)] flex flex-col overflow-hidden bg-white shadow-2xl">
-        <CardHeader className="border-b bg-white">
+      <Card className="relative z-10 flex flex-col flex-1 overflow-hidden bg-background/95 backdrop-blur-sm">
+        <CardHeader className="border-b">
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="flex items-center gap-2">
@@ -845,6 +891,17 @@ export function ChatInterface({ onNavigateToJournal }: ChatInterfaceProps) {
               <Button
                 variant="ghost"
                 size="sm"
+                onClick={() => setShowBackgroundDialog(true)}
+                className="text-muted-foreground"
+                title="Background Settings"
+              >
+                <ImageIcon className="w-4 h-4 mr-2" />
+                Background
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => setShowApiDialog(true)}
                 className="text-muted-foreground"
                 title="API Settings"
@@ -903,20 +960,20 @@ export function ChatInterface({ onNavigateToJournal }: ChatInterfaceProps) {
 
           {/* Messages Area */}
           <ScrollArea className="flex-1 p-4" ref={scrollRef}>
-              {messages.length === 0 ? (
-                <div className="flex items-center justify-center h-full text-center">
-                  <div className="max-w-md space-y-4">
-                    <Heart className="w-12 h-12 mx-auto text-rose-500" />
-                    <p className="text-lg text-black font-medium">Welcome! I&apos;m here to listen.</p>
-                    <p className="text-sm text-gray-700">
-                      Feel free to share whatever&apos;s on your mind. This is a judgment-free space
-                      where you can express your thoughts and feelings.
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      Note: I&apos;m not a therapist or counselor - just a supportive listener.
-                    </p>
-                  </div>
+            {messages.length === 0 ? (
+              <div className="flex items-center justify-center h-full text-center text-muted-foreground">
+                <div className="max-w-md space-y-4">
+                  <Heart className="w-12 h-12 mx-auto text-rose-300" />
+                  <p className="text-lg">Welcome! I&apos;m here to listen.</p>
+                  <p className="text-sm">
+                    Feel free to share whatever&apos;s on your mind. This is a judgment-free space
+                    where you can express your thoughts and feelings.
+                  </p>
+                  <p className="text-xs text-muted-foreground/70">
+                    Note: I&apos;m not a therapist or counselor - just a supportive listener.
+                  </p>
                 </div>
+              </div>
             ) : (
               <div className="space-y-4">
                 {messages.map((msg, idx) => {
@@ -941,19 +998,19 @@ export function ChatInterface({ onNavigateToJournal }: ChatInterfaceProps) {
                           <span className="text-xs text-muted-foreground">{currentAvatar.name}</span>
                         </div>
                       )}
-                        <div
-                          className={`max-w-[80%] rounded-lg px-4 py-2 ${
-                            msg.role === 'user'
-                              ? 'bg-black text-white'
-                              : 'bg-gray-100 text-black border border-gray-200'
-                          }`}
-                        >
-                          <p className="whitespace-pre-wrap break-words">{msg.content}</p>
-                          <p className={`text-xs mt-1 ${
-                            msg.role === 'user' 
-                              ? 'text-white/70' 
-                              : 'text-gray-500'
-                          }`}>
+                      <div
+                        className={`max-w-[80%] rounded-lg px-4 py-2 ${
+                          msg.role === 'user'
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-muted'
+                        }`}
+                      >
+                        <p className="whitespace-pre-wrap break-words">{msg.content}</p>
+                        <p className={`text-xs mt-1 ${
+                          msg.role === 'user' 
+                            ? 'text-primary-foreground/70' 
+                            : 'text-muted-foreground'
+                        }`}>
                           {formatTime(msg.timestamp)}
                         </p>
                       </div>
@@ -962,22 +1019,17 @@ export function ChatInterface({ onNavigateToJournal }: ChatInterfaceProps) {
                 })}
                 {isLoading && (
                   <div className="flex justify-start">
-                    <div className="bg-gray-100 rounded-lg px-4 py-2 border border-gray-200">
-                      <Loader2 className="w-5 h-5 animate-spin text-gray-500" />
+                    <div className="bg-muted rounded-lg px-4 py-2">
+                      <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
                     </div>
                   </div>
                 )}
               </div>
             )}
           </ScrollArea>
-        </CardContent>
-      </Card>
-      </div>
 
-      {/* Input Area - Fixed at bottom between mountains */}
-      <div className="relative z-10 pb-8 px-4">
-        <Card className="w-full max-w-2xl mx-auto bg-white shadow-2xl">
-          <CardContent className="p-4">
+          {/* Input Area */}
+          <div className="border-t p-4">
             <div className="flex gap-2">
               <Input
                 ref={inputRef}
@@ -986,13 +1038,12 @@ export function ChatInterface({ onNavigateToJournal }: ChatInterfaceProps) {
                 onKeyPress={handleKeyPress}
                 placeholder="Share what's on your mind..."
                 disabled={isLoading}
-                className="flex-1 bg-white border-gray-300"
+                className="flex-1"
               />
               <Button
                 onClick={handleSend}
                 disabled={isLoading || !input.trim()}
                 size="icon"
-                className="bg-black hover:bg-gray-800 text-white"
               >
                 {isLoading ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -1001,12 +1052,12 @@ export function ChatInterface({ onNavigateToJournal }: ChatInterfaceProps) {
                 )}
               </Button>
             </div>
-            <p className="text-xs text-gray-600 mt-2">
+            <p className="text-xs text-muted-foreground mt-2">
               Press Enter to send • This is not a substitute for professional mental health care
             </p>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* API Key Configuration Dialog */}
       {showApiDialog && (
@@ -1055,6 +1106,17 @@ export function ChatInterface({ onNavigateToJournal }: ChatInterfaceProps) {
         <CustomAvatarDialog
           onSave={handleCreateCustomAvatar}
           onCancel={() => setShowAvatarDialog(false)}
+        />
+      )}
+
+      {/* Background Settings Dialog */}
+      {showBackgroundDialog && (
+        <BackgroundSettingsDialog
+          currentBackground={backgroundImage}
+          currentOpacity={backgroundOpacity}
+          currentBlur={backgroundBlur}
+          onSave={handleSaveBackground}
+          onCancel={() => setShowBackgroundDialog(false)}
         />
       )}
 
