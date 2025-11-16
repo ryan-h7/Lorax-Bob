@@ -55,6 +55,9 @@ export async function POST(request: NextRequest) {
       
       // Get ALL user facts from localStorage
       const allUserFacts = getUserFacts();
+      console.log('🔍 [GREETING] Total user facts found:', allUserFacts.length);
+      console.log('🔍 [GREETING] User facts:', JSON.stringify(allUserFacts, null, 2));
+      
       let userFactsSection = '';
       
       if (allUserFacts.length > 0) {
@@ -110,6 +113,8 @@ export async function POST(request: NextRequest) {
       
       // Get ALL journal entries from localStorage
       const allJournalEntries = getJournalEntries();
+      console.log('📖 [GREETING] Total journal entries found:', allJournalEntries.length);
+      
       let journalSection = '';
       
       if (allJournalEntries.length > 0) {
@@ -159,6 +164,13 @@ export async function POST(request: NextRequest) {
       // Combine ALL context
       const comprehensiveContext = userFactsSection + journalSection;
       
+      console.log('📝 [GREETING] User Facts Section:');
+      console.log(userFactsSection || '(No user facts)');
+      console.log('\n📝 [GREETING] Journal Section:');
+      console.log(journalSection || '(No journal entries)');
+      console.log('\n📝 [GREETING] Complete comprehensive context:');
+      console.log(comprehensiveContext || '(No prior context available)');
+      
       // Create greeting prompt with full context
       const greetingMessages = [
         {
@@ -194,6 +206,9 @@ Generate ONLY the greeting message, nothing else.`
         }
       ];
       
+      console.log('📤 [GREETING] Complete greeting messages being sent to AI:');
+      console.log(JSON.stringify(greetingMessages, null, 2));
+      
       // Get AI-generated greeting
       const greetingResponse = await deepseek.createChatCompletion(greetingMessages, {
         temperature: 0.9,
@@ -202,6 +217,8 @@ Generate ONLY the greeting message, nothing else.`
       
       const greeting = greetingResponse.choices[0]?.message?.content || 
         `Hey! How are you doing this ${timeOfDay}?`;
+      
+      console.log('✅ [GREETING] AI generated greeting:', greeting);
       
       // Add greeting to memory
       memory.addMessage('assistant', greeting);
