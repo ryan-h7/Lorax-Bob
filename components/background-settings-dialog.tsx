@@ -13,7 +13,8 @@ interface BackgroundSettingsDialogProps {
   currentOpacity: number;
   currentBlur: number;
   currentMode: 'custom' | 'time-based';
-  onSave: (background: string | null, opacity: number, blur: number, mode: 'custom' | 'time-based') => void;
+  currentUiTransparency: number;
+  onSave: (background: string | null, opacity: number, blur: number, mode: 'custom' | 'time-based', uiTransparency: number) => void;
   onCancel: () => void;
 }
 
@@ -21,7 +22,8 @@ export function BackgroundSettingsDialog({
   currentBackground, 
   currentOpacity, 
   currentBlur,
-  currentMode, 
+  currentMode,
+  currentUiTransparency,
   onSave, 
   onCancel 
 }: BackgroundSettingsDialogProps) {
@@ -29,6 +31,7 @@ export function BackgroundSettingsDialog({
   const [backgroundUrl, setBackgroundUrl] = useState<string | null>(currentBackground);
   const [opacity, setOpacity] = useState(currentOpacity);
   const [blur, setBlur] = useState(currentBlur);
+  const [uiTransparency, setUiTransparency] = useState(currentUiTransparency);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -57,7 +60,7 @@ export function BackgroundSettingsDialog({
   };
 
   const handleSave = () => {
-    onSave(backgroundUrl, opacity, blur, mode);
+    onSave(backgroundUrl, opacity, blur, mode, uiTransparency);
   };
 
   // Get time-based gradient for preview
@@ -250,6 +253,25 @@ export function BackgroundSettingsDialog({
               />
             </div>
           )}
+
+          {/* UI Transparency Slider */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label>UI Transparency</Label>
+              <span className="text-sm text-muted-foreground">{uiTransparency}%</span>
+            </div>
+            <Slider
+              value={[uiTransparency]}
+              onValueChange={(value) => setUiTransparency(value[0])}
+              min={0}
+              max={100}
+              step={5}
+              className="w-full"
+            />
+            <p className="text-xs text-muted-foreground">
+              Controls the transparency of all UI elements (cards, messages, etc.)
+            </p>
+          </div>
 
           {/* Info */}
           <div className="bg-muted rounded-lg p-3">

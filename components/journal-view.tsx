@@ -25,7 +25,11 @@ import {
 } from '@/lib/journal';
 import { formatDistanceToNow } from 'date-fns';
 
-export function JournalView() {
+interface JournalViewProps {
+  uiTransparency?: number;
+}
+
+export function JournalView({ uiTransparency = 50 }: JournalViewProps) {
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [selectedEntry, setSelectedEntry] = useState<JournalEntry | null>(null);
   const [showStats, setShowStats] = useState(false);
@@ -59,7 +63,7 @@ export function JournalView() {
   return (
     <div className="h-full flex flex-col lg:flex-row gap-4">
       {/* Journal List */}
-      <Card className="flex-1 flex flex-col bg-background/50 backdrop-blur-sm border-2">
+      <Card className="flex-1 flex flex-col backdrop-blur-sm border-2" style={{ backgroundColor: `hsl(var(--background) / ${uiTransparency}%)` }}>
         <CardHeader className="border-b border-border/50">
           <div className="flex items-center justify-between">
             <div>
@@ -194,7 +198,7 @@ export function JournalView() {
 
       {/* Entry Details */}
       {selectedEntry && (
-        <Card className="flex-1 flex flex-col bg-background/50 backdrop-blur-sm border-2">
+        <Card className="flex-1 flex flex-col backdrop-blur-sm border-2" style={{ backgroundColor: `hsl(var(--background) / ${uiTransparency}%)` }}>
           <CardHeader className="border-b border-border/50">
             <CardTitle>Entry Details</CardTitle>
             <CardDescription>

@@ -12,6 +12,7 @@ const BACKGROUND_KEY = 'ai-therapist-background';
 const BACKGROUND_OPACITY_KEY = 'ai-therapist-background-opacity';
 const BACKGROUND_BLUR_KEY = 'ai-therapist-background-blur';
 const BACKGROUND_MODE_KEY = 'ai-therapist-background-mode';
+const UI_TRANSPARENCY_KEY = 'ai-therapist-ui-transparency';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState('chat');
@@ -20,6 +21,7 @@ export default function Home() {
   const [backgroundBlur, setBackgroundBlur] = useState(5);
   const [backgroundMode, setBackgroundMode] = useState<'custom' | 'time-based'>('custom');
   const [timeGradient, setTimeGradient] = useState<string>(getTimeBasedGradient());
+  const [uiTransparency, setUiTransparency] = useState(50);
 
   // Load background settings from localStorage
   useEffect(() => {
@@ -39,6 +41,10 @@ export default function Home() {
       const savedMode = localStorage.getItem(BACKGROUND_MODE_KEY);
       if (savedMode === 'time-based' || savedMode === 'custom') {
         setBackgroundMode(savedMode);
+      }
+      const savedUiTransparency = localStorage.getItem(UI_TRANSPARENCY_KEY);
+      if (savedUiTransparency) {
+        setUiTransparency(parseInt(savedUiTransparency, 10));
       }
     }
   }, []);
@@ -111,15 +117,17 @@ export default function Home() {
             <ChatInterface 
               onNavigateToJournal={() => setActiveTab('journal')}
               onBackgroundUpdate={handleBackgroundUpdate}
+              uiTransparency={uiTransparency}
+              onUiTransparencyUpdate={setUiTransparency}
             />
           </TabsContent>
           
           <TabsContent value="journal" className="flex-1 mt-0">
-            <JournalView />
+            <JournalView uiTransparency={uiTransparency} />
           </TabsContent>
           
           <TabsContent value="stats" className="flex-1 mt-0">
-            <StatsView />
+            <StatsView uiTransparency={uiTransparency} />
           </TabsContent>
         </Tabs>
       </div>

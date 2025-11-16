@@ -72,13 +72,16 @@ const BACKGROUND_KEY = 'ai-therapist-background';
 const BACKGROUND_OPACITY_KEY = 'ai-therapist-background-opacity';
 const BACKGROUND_BLUR_KEY = 'ai-therapist-background-blur';
 const BACKGROUND_MODE_KEY = 'ai-therapist-background-mode';
+const UI_TRANSPARENCY_KEY = 'ai-therapist-ui-transparency';
 
 interface ChatInterfaceProps {
   onNavigateToJournal?: () => void;
   onBackgroundUpdate?: (background: string | null, opacity: number, blur: number, mode: 'custom' | 'time-based') => void;
+  uiTransparency?: number;
+  onUiTransparencyUpdate?: (transparency: number) => void;
 }
 
-export function ChatInterface({ onNavigateToJournal, onBackgroundUpdate }: ChatInterfaceProps) {
+export function ChatInterface({ onNavigateToJournal, onBackgroundUpdate, uiTransparency: propUiTransparency, onUiTransparencyUpdate }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -122,6 +125,10 @@ export function ChatInterface({ onNavigateToJournal, onBackgroundUpdate }: ChatI
   const [backgroundBlur, setBackgroundBlur] = useState(5);
   const [backgroundMode, setBackgroundMode] = useState<'custom' | 'time-based'>('custom');
   const [showBackgroundDialog, setShowBackgroundDialog] = useState(false);
+  
+  // UI transparency (use prop if provided, otherwise use local state)
+  const [localUiTransparency, setLocalUiTransparency] = useState(50);
+  const uiTransparency = propUiTransparency !== undefined ? propUiTransparency : localUiTransparency;
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -200,6 +207,12 @@ export function ChatInterface({ onNavigateToJournal, onBackgroundUpdate }: ChatI
       const savedMode = localStorage.getItem(BACKGROUND_MODE_KEY);
       if (savedMode === 'time-based' || savedMode === 'custom') {
         setBackgroundMode(savedMode);
+      }
+      
+      // Load UI transparency
+      const savedUiTransparency = localStorage.getItem(UI_TRANSPARENCY_KEY);
+      if (savedUiTransparency) {
+        setLocalUiTransparency(parseInt(savedUiTransparency, 10));
       }
 
       setInitialLoadComplete(true);
@@ -747,11 +760,12 @@ export function ChatInterface({ onNavigateToJournal, onBackgroundUpdate }: ChatI
     setShowAvatarDialog(false);
   };
 
-  const handleSaveBackground = (background: string | null, opacity: number, blur: number, mode: 'custom' | 'time-based') => {
+  const handleSaveBackground = (background: string | null, opacity: number, blur: number, mode: 'custom' | 'time-based', newUiTransparency: number) => {
     setBackgroundImage(background);
     setBackgroundOpacity(opacity);
     setBackgroundBlur(blur);
     setBackgroundMode(mode);
+    setLocalUiTransparency(newUiTransparency);
     setShowBackgroundDialog(false);
     
     // Save to localStorage
@@ -759,6 +773,7 @@ export function ChatInterface({ onNavigateToJournal, onBackgroundUpdate }: ChatI
       localStorage.setItem(BACKGROUND_MODE_KEY, mode);
       localStorage.setItem(BACKGROUND_OPACITY_KEY, opacity.toString());
       localStorage.setItem(BACKGROUND_BLUR_KEY, blur.toString());
+      localStorage.setItem(UI_TRANSPARENCY_KEY, newUiTransparency.toString());
       
       if (mode === 'custom') {
         if (background) {
@@ -775,6 +790,11 @@ export function ChatInterface({ onNavigateToJournal, onBackgroundUpdate }: ChatI
     // Update parent component (page.tsx) with new background settings
     if (onBackgroundUpdate) {
       onBackgroundUpdate(background, opacity, blur, mode);
+    }
+    
+    // Update parent component with new UI transparency
+    if (onUiTransparencyUpdate) {
+      onUiTransparencyUpdate(newUiTransparency);
     }
   };
 
@@ -822,7 +842,7 @@ export function ChatInterface({ onNavigateToJournal, onBackgroundUpdate }: ChatI
 
   return (
     <div className="flex flex-col h-full max-w-4xl mx-auto">
-      <Card className="flex flex-col flex-1 overflow-hidden bg-background/50 backdrop-blur-sm border-2">
+      <Card className="flex flex-col flex-1 overflow-hidden backdrop-blur-sm border-2" style={{ backgroundColor: `hsl(var(--background) / ${uiTransparency}%)` }}>
         <CardHeader className="border-b border-border/50">
           <div className="flex items-center justify-end">
             <div className="flex gap-2">
@@ -995,9 +1015,14 @@ export function ChatInterface({ onNavigateToJournal, onBackgroundUpdate }: ChatI
                       <div
                         className={`max-w-[80%] rounded-lg px-4 py-2 border-2 ${
                           msg.role === 'user'
-                            ? 'bg-primary/50 text-primary-foreground border-primary'
-                            : 'bg-muted/50 border-border'
+                            ? 'text-primary-foreground border-primary'
+                            : 'border-border'
                         }`}
+                        style={{
+                          backgroundColor: msg.role === 'user' 
+                            ? `hsl(var(--primary) / ${uiTransparency}%)` 
+                            : `hsl(var(--muted) / ${uiTransparency}%)`
+                        }}
                       >
                         <p className="whitespace-pre-wrap break-words">{msg.content}</p>
                         <p className={`text-xs mt-1 ${
@@ -1013,7 +1038,10 @@ export function ChatInterface({ onNavigateToJournal, onBackgroundUpdate }: ChatI
                 })}
                 {isLoading && (
                   <div className="flex justify-start">
-                    <div className="bg-muted/50 rounded-lg px-4 py-2 border-2 border-border">
+                    <div 
+                      className="rounded-lg px-4 py-2 border-2 border-border"
+                      style={{ backgroundColor: `hsl(var(--muted) / ${uiTransparency}%)` }}
+                    >
                       <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
                     </div>
                   </div>
@@ -1110,6 +1138,7 @@ export function ChatInterface({ onNavigateToJournal, onBackgroundUpdate }: ChatI
           currentOpacity={backgroundOpacity}
           currentBlur={backgroundBlur}
           currentMode={backgroundMode}
+          currentUiTransparency={uiTransparency}
           onSave={handleSaveBackground}
           onCancel={() => setShowBackgroundDialog(false)}
         />
