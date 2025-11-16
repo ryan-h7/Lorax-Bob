@@ -218,6 +218,14 @@ export function ChatInterface({ onNavigateToJournal }: ChatInterfaceProps) {
         return;
       }
 
+      // Get user facts and journal entries from localStorage (client-side)
+      const userFacts = getUserFacts();
+      const { getJournalEntries } = require('@/lib/journal');
+      const journalEntries = getJournalEntries();
+      
+      console.log('📤 [CLIENT] Sending user facts to server:', userFacts.length, 'facts');
+      console.log('📤 [CLIENT] Sending journal entries to server:', journalEntries.length, 'entries');
+
       // Generate AI greeting with full context
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -231,7 +239,9 @@ export function ChatInterface({ onNavigateToJournal }: ChatInterfaceProps) {
           apiUrl: apiUrl || 'https://api.deepseek.com/v1',
           model: model || 'deepseek-v3',
           tone,
-          isGreeting: true // Flag to indicate this is a greeting request
+          isGreeting: true, // Flag to indicate this is a greeting request
+          userFacts, // Send user facts from localStorage
+          journalEntries // Send journal entries from localStorage
         })
       });
 

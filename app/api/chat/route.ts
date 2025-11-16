@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { DeepSeekClient } from '@/lib/deepseek';
 import { MemoryManager, createSummarizationPrompt, Message } from '@/lib/memory';
 import { getRecentJournalContext } from '@/lib/greeting';
-import { formatFactsForContext } from '@/lib/user-memory';
+import { formatFactsForContext, UserFact } from '@/lib/user-memory';
+import { JournalEntry } from '@/lib/journal';
 
 // Store memory per session (in production, use Redis or similar)
 const sessionMemories = new Map<string, MemoryManager>();
@@ -10,7 +11,7 @@ const sessionMemories = new Map<string, MemoryManager>();
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { message, sessionId, apiKey, apiUrl, model, tone, isGreeting } = body;
+    const { message, sessionId, apiKey, apiUrl, model, tone, isGreeting, userFacts, journalEntries } = body;
 
     if (!message || typeof message !== 'string') {
       return NextResponse.json(
@@ -49,14 +50,13 @@ export async function POST(request: NextRequest) {
 
     // Handle greeting request specially
     if (isGreeting && message === '[GREETING_REQUEST]') {
-      // Build comprehensive context from ALL stored user data
-      const { getUserFacts } = await import('@/lib/user-memory');
-      const { getJournalEntries } = await import('@/lib/journal');
+      // Use user facts and journal entries sent from client
+      const allUserFacts = userFacts || [];
+      const allJournalEntries = journalEntries || [];
       
-      // Get ALL user facts from localStorage
-      const allUserFacts = getUserFacts();
-      console.log('🔍 [GREETING] Total user facts found:', allUserFacts.length);
+      console.log('🔍 [GREETING] Total user facts received from client:', allUserFacts.length);
       console.log('🔍 [GREETING] User facts:', JSON.stringify(allUserFacts, null, 2));
+      console.log('📖 [GREETING] Total journal entries received from client:', allJournalEntries.length);
       
       let userFactsSection = '';
       
@@ -65,56 +65,53 @@ export async function POST(request: NextRequest) {
         
         // Group by type for better organization
         const factsByType = {
-          person: allUserFacts.filter(f => f.type === 'person'),
-          place: allUserFacts.filter(f => f.type === 'place'),
-          thing: allUserFacts.filter(f => f.type === 'thing'),
-          event: allUserFacts.filter(f => f.type === 'event'),
-          mood: allUserFacts.filter(f => f.type === 'mood'),
-          action: allUserFacts.filter(f => f.type === 'action'),
-          date: allUserFacts.filter(f => f.type === 'date')
+          person: allUserFacts.filter((f: UserFact) => f.type === 'person'),
+          place: allUserFacts.filter((f: UserFact) => f.type === 'place'),
+          thing: allUserFacts.filter((f: UserFact) => f.type === 'thing'),
+          event: allUserFacts.filter((f: UserFact) => f.type === 'event'),
+          mood: allUserFacts.filter((f: UserFact) => f.type === 'mood'),
+          action: allUserFacts.filter((f: UserFact) => f.type === 'action'),
+          date: allUserFacts.filter((f: UserFact) => f.type === 'date')
         };
         
         if (factsByType.person.length > 0) {
-          userFactsSection += '\nPeople in their life:\n' + factsByType.person.map(f => 
+          userFactsSection += '\nPeople in their life:\n' + factsByType.person.map((f: UserFact) => 
             `  - ${f.content}${f.context ? ` (${f.context})` : ''}`
           ).join('\n');
         }
         if (factsByType.place.length > 0) {
-          userFactsSection += '\n\nPlaces:\n' + factsByType.place.map(f => 
+          userFactsSection += '\n\nPlaces:\n' + factsByType.place.map((f: UserFact) => 
             `  - ${f.content}${f.context ? ` (${f.context})` : ''}`
           ).join('\n');
         }
         if (factsByType.event.length > 0) {
-          userFactsSection += '\n\nUpcoming/Recent Events:\n' + factsByType.event.map(f => 
+          userFactsSection += '\n\nUpcoming/Recent Events:\n' + factsByType.event.map((f: UserFact) => 
             `  - ${f.content}${f.context ? ` (${f.context})` : ''} [Importance: ${f.importance}]`
           ).join('\n');
         }
         if (factsByType.mood.length > 0) {
-          userFactsSection += '\n\nRecent Emotional States:\n' + factsByType.mood.map(f => 
+          userFactsSection += '\n\nRecent Emotional States:\n' + factsByType.mood.map((f: UserFact) => 
             `  - ${f.content}${f.context ? ` (${f.context})` : ''}`
           ).join('\n');
         }
         if (factsByType.action.length > 0) {
-          userFactsSection += '\n\nActions/Goals:\n' + factsByType.action.map(f => 
+          userFactsSection += '\n\nActions/Goals:\n' + factsByType.action.map((f: UserFact) => 
             `  - ${f.content}${f.context ? ` (${f.context})` : ''}`
           ).join('\n');
         }
         if (factsByType.thing.length > 0) {
-          userFactsSection += '\n\nImportant Things/Topics:\n' + factsByType.thing.map(f => 
+          userFactsSection += '\n\nImportant Things/Topics:\n' + factsByType.thing.map((f: UserFact) => 
             `  - ${f.content}${f.context ? ` (${f.context})` : ''}`
           ).join('\n');
         }
         if (factsByType.date.length > 0) {
-          userFactsSection += '\n\nImportant Dates:\n' + factsByType.date.map(f => 
+          userFactsSection += '\n\nImportant Dates:\n' + factsByType.date.map((f: UserFact) => 
             `  - ${f.content}${f.context ? ` (${f.context})` : ''}`
           ).join('\n');
         }
       }
       
-      // Get ALL journal entries from localStorage
-      const allJournalEntries = getJournalEntries();
-      console.log('📖 [GREETING] Total journal entries found:', allJournalEntries.length);
-      
+      // Journal entries already loaded from client above
       let journalSection = '';
       
       if (allJournalEntries.length > 0) {
@@ -123,7 +120,7 @@ export async function POST(request: NextRequest) {
         // Get up to 10 most recent entries for context (to avoid token overflow)
         const recentEntries = allJournalEntries.slice(0, 10);
         
-        journalSection += recentEntries.map((entry, index) => {
+        journalSection += recentEntries.map((entry: JournalEntry, index: number) => {
           const daysAgo = Math.floor((Date.now() - entry.timestamp) / (1000 * 60 * 60 * 24));
           const timeAgo = daysAgo === 0 ? 'earlier today' : 
                           daysAgo === 1 ? 'yesterday' : 
